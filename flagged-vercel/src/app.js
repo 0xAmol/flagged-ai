@@ -192,3 +192,5 @@ app.get("/v1/stats", async (c) => {
   c.header("Cache-Control", "public, s-maxage=30");
   return c.json({ flags: f.n, agent_flags: f.a, votes: v.n });
 });
+
+export default app;
