@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Flag AI-generated content where you find it, and see what the crowd has already flagged.",
   "permissions": ["storage", "activeTab", "contextMenus", "tabs"],
-  "host_permissions": ["<all_urls>", "http://localhost:8787/*"],
+  "host_permissions": ["<all_urls>", "https://flagged-api.vercel.app/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "flag.ai — is this AI?"

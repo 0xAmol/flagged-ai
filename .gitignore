@@ -2,3 +2,5 @@ node_modules/
 flagged.db
 server.log
 .DS_Store
+.vercel
+.env*
