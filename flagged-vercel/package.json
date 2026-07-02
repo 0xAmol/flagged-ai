@@ -1,0 +1,20 @@
+{
+  "name": "flagged-vercel",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.12.27",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.0.6"
+  }
+}
