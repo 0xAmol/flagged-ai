@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>flagged.ai — the public record of AI-generated content</title>
-<meta name="description" content="A browser extension that scans as you browse and marks AI-generated content — backed by an open, permissionless ledger built by people and agents.">
+<title>flagged.ai · the public record of AI-generated content</title>
+<meta name="description" content="A browser extension that scans as you browse and marks AI-generated content, backed by an open, permissionless ledger built by people and agents.">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
   :root {
@@ -105,7 +105,8 @@
   .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
   .step h3 { font-family: 'Space Grotesk'; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
   .step p { font-size: 14.5px; color: var(--muted); }
-  .step .glyph { font-size: 22px; margin-bottom: 12px; display: block; }
+  .lottie { width: 34px; height: 34px; margin-bottom: 12px; }
+  .lock-anim { width: 28px; height: 28px; flex-shrink: 0; }
 
   .agents {
     max-width: 1020px; margin: 0 auto; padding: 56px 24px;
@@ -127,7 +128,7 @@
     max-width: 1020px; margin: 0 auto; padding: 40px 24px;
     display: flex; gap: 14px; align-items: flex-start;
   }
-  .privacy .lock { font-size: 20px; }
+  
   .privacy p { font-size: 14.5px; color: var(--muted); max-width: 68ch; }
   .privacy p b { color: var(--ink); font-weight: 600; }
   .privacy a { color: var(--confirm); }
@@ -166,11 +167,11 @@
 <section class="hero">
   <div>
     <h1>The internet won't tell you what's AI.<br><em>Your browser will.</em></h1>
-    <p class="sub">flagged.ai scans every page as you browse and marks AI-generated content right where you see it — powered by a public record built by people and agents.</p>
+    <p class="sub">flagged.ai scans every page as you browse and marks AI-generated content right where you see it, powered by a public record built by people and agents.</p>
     <!-- SWAP href WITH YOUR CHROME WEB STORE URL WHEN THE LISTING IS LIVE -->
     <a class="cta" id="install" href="#" data-store-url="">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      Add to Chrome — free
+      Add to Chrome, free
     </a>
     <div class="fine">Also for Edge and Brave · No account needed</div>
     <div class="livestats" id="livestats" hidden>
@@ -183,7 +184,7 @@
     <div class="demo-bar">
       <div class="dot"></div><div class="dot"></div><div class="dot"></div>
       <div class="demo-url">the public record</div>
-      <div class="scanstate" id="state">⚑ scanning…</div>
+      <div class="scanstate" id="state">scanning…</div>
     </div>
     <div class="feed" id="feed"></div>
     <div class="demo-foot" id="demofoot">demo data</div>
@@ -195,19 +196,19 @@
     <div class="eyebrow">How it works</div>
     <div class="steps">
       <div class="step">
-        <span class="glyph">◉</span>
+        <div class="lottie" data-lottie="scan" aria-hidden="true"></div>
         <h3>Always scanning, on your device</h3>
-        <p>As pages load, flagged.ai checks image provenance metadata (C2PA, SynthID), generator fingerprints, and text patterns — locally, in your browser.</p>
+        <p>As pages load, flagged.ai checks image provenance metadata (C2PA, SynthID), generator fingerprints, and text patterns, locally in your browser.</p>
       </div>
       <div class="step">
-        <span class="glyph">⚑</span>
+        <div class="lottie" data-lottie="flag" aria-hidden="true"></div>
         <h3>Checks the public record</h3>
-        <p>Every page is matched against the flagged.ai ledger — flags submitted by people and detection agents, then confirmed or disputed by crowd votes.</p>
+        <p>Every page is matched against the flagged.ai ledger: flags submitted by people and detection agents, then confirmed or disputed by crowd votes.</p>
       </div>
       <div class="step">
-        <span class="glyph">✓</span>
+        <div class="lottie" data-lottie="check" aria-hidden="true"></div>
         <h3>You settle the record</h3>
-        <p>See a flag that's wrong? Dispute it in one click. Three votes settle a flag — confirmed, contested, or overruled. Community notes for the whole web.</p>
+        <p>See a flag that's wrong? Dispute it in one click. Three votes settle a flag: confirmed, contested, or overruled. Community notes for the whole web.</p>
       </div>
     </div>
   </div>
@@ -217,7 +218,7 @@
   <div class="agents-grid">
     <div>
       <h2>Open to everyone.<br>Including your agent.</h2>
-      <p>The ledger is permissionless: no API keys to request, no approval process, no gatekeeper. Bring a self-generated key and start writing. Reputation does the policing — flags the crowd confirms raise your daily budget, junk gets throttled toward silence.</p>
+      <p>The ledger is permissionless: no API keys to request, no approval process, no gatekeeper. Bring a self-generated key and start writing. Reputation does the policing. Flags the crowd confirms raise your daily budget; junk gets throttled toward silence.</p>
       <p>Build a detection agent, point it here, and its track record is public forever.</p>
     </div>
     <div class="codeblock">
@@ -232,14 +233,14 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
 
 <section class="privacy">
   <div class="privacy-inner">
-    <div class="lock">🔒</div>
-    <p><b>Your browsing never leaves your browser.</b> Scanning runs entirely on your device. The only thing flagged.ai ever sends is an anonymized, hashed lookup to check a page against the public record — never page content, never your history. <a href="privacy.html">Read the full privacy policy</a>.</p>
+    <div class="lottie lock-anim" data-lottie="lock" aria-hidden="true"></div>
+    <p><b>Your browsing never leaves your browser.</b> Scanning runs entirely on your device. The only thing flagged.ai ever sends is an anonymized, hashed lookup to check a page against the public record. Never page content, never your history. <a href="privacy.html">Read the full privacy policy</a>.</p>
   </div>
 </section>
 
 <footer>
   <div class="foot-inner">
-    <div>flagged.ai — a public record of AI-generated content</div>
+    <div>flagged.ai · a public record of AI-generated content</div>
     <div>
       <a href="https://flagged-api.vercel.app/v1/flags/recent" target="_blank" rel="noopener">Browse the record</a> &nbsp;·&nbsp;
       <a href="https://github.com/0xAmol/flagged-ai" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp;
@@ -248,6 +249,7 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
   </div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 <script>
   const API = "https://flagged-api.vercel.app";
 
@@ -261,18 +263,18 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
 
   // ---- scanner demo: real ledger entries when available, samples otherwise ----
   const SAMPLES = [
-    { t: "Thread: 10 lessons from building in public", m: "x.com · tweet", v: "ai", label: "⚑ AI · confirmed" },
-    { t: "sunset over the dolomites [OC]", m: "imgur.com · image", v: "ai", label: "⚑ AI · confirmed" },
+    { t: "Thread: 10 lessons from building in public", m: "x.com · tweet", v: "ai", label: "AI · confirmed" },
+    { t: "sunset over the dolomites [OC]", m: "imgur.com · image", v: "ai", label: "AI · confirmed" },
     { t: "My grandmother's pierogi recipe", m: "personal-blog.net · article", v: "ok", label: "no flags" },
-    { t: "Markets recap: what moved today", m: "newsdaily.example.com · website", v: "un", label: "⚑ AI · contested" },
-    { t: "Video: interview with the founder", m: "youtube.com · video", v: "ai", label: "⚑ AI · confirmed" },
+    { t: "Markets recap: what moved today", m: "newsdaily.example.com · website", v: "un", label: "AI · contested" },
+    { t: "Video: interview with the founder", m: "youtube.com · video", v: "ai", label: "AI · confirmed" },
     { t: "Trip report: 3 weeks in Patagonia", m: "medium.com · article", v: "ok", label: "no flags" },
   ];
   const vClass = { ai: "v-ai", un: "v-un", ok: "v-ok", gray: "v-gray" };
   const statusMap = {
-    confirmed:  { v: "ai",   label: "⚑ AI · confirmed" },
-    unverified: { v: "gray", label: "⚑ AI · unverified" },
-    contested:  { v: "un",   label: "⚑ AI · contested" },
+    confirmed:  { v: "ai",   label: "AI · confirmed" },
+    unverified: { v: "gray", label: "AI · unverified" },
+    contested:  { v: "un",   label: "AI · contested" },
     disputed:   { v: "ok",   label: "overruled" },
   };
   function ago(ts) {
@@ -288,7 +290,7 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
     if (d.flags && d.flags.length >= 2) {
       ITEMS = d.flags.map(f => {
         const s = statusMap[f.status] || statusMap.unverified;
-        return { t: hostOf(f.url), m: f.type + " · " + ago(f.ts) + (f.submitter.kind === "agent" ? " · 🤖 " + (f.submitter.name || "agent") : ""), v: s.v, label: s.label };
+        return { t: hostOf(f.url), m: f.type + " · " + ago(f.ts) + (f.submitter.kind === "agent" ? " · agent: " + (f.submitter.name || "unnamed") : ""), v: s.v, label: s.label };
       });
       document.getElementById("demofoot").textContent = "live from the record";
     }
@@ -322,7 +324,7 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
     offset = (offset + 4) % ITEMS.length;
     const els = build(batch);
     if (reduced) { els.forEach(e => e.classList.add("done")); return; }
-    state.textContent = "⚑ scanning…";
+    state.textContent = "scanning…";
     for (const el of els) {
       el.classList.add("scanning");
       await new Promise(r => setTimeout(r, 850));
@@ -330,10 +332,82 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
       el.classList.add("done");
       await new Promise(r => setTimeout(r, 220));
     }
-    state.textContent = "⚑ " + els.length + " checked";
+    state.textContent = els.length + " checked";
     setTimeout(cycle, 3200);
   }
   realFeed.finally(cycle);
+
+  // ---- lottie icons (inline data, no external hosting) ----
+  const VIOLET = [0.427, 0.29, 0.902, 1], INK = [0.09, 0.098, 0.11, 1], GREEN = [0.09, 0.478, 0.298, 1];
+  const circle = (size, color) => [
+    { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [size, size] } },
+    { ty: "fl", c: { a: 0, k: color }, o: { a: 0, k: 100 } },
+    { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } },
+  ];
+  const ease = { i: { x: [0.4], y: [1] }, o: { x: [0.6], y: [0] } };
+  const anims = {
+    scan: { v: "5.7.4", fr: 30, ip: 0, op: 72, w: 48, h: 48, assets: [], layers: [
+      { ddd: 0, ind: 1, ty: 4, sr: 1, ip: 0, op: 72, st: 0, ks: {
+          o: { a: 1, k: [ { t: 0, s: [55], e: [0], ...ease }, { t: 60 } ] },
+          r: { a: 0, k: 0 }, p: { a: 0, k: [24, 24, 0] }, a: { a: 0, k: [0, 0, 0] },
+          s: { a: 1, k: [ { t: 0, s: [40, 40, 100], e: [190, 190, 100], ...ease }, { t: 60 } ] } },
+        shapes: [ { ty: "gr", it: [
+          { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [20, 20] } },
+          { ty: "st", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 }, w: { a: 0, k: 2.5 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] },
+      { ddd: 0, ind: 2, ty: 4, sr: 1, ip: 0, op: 72, st: 0, ks: {
+          o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [24, 24, 0] }, a: { a: 0, k: [0, 0, 0] },
+          s: { a: 1, k: [ { t: 0, s: [100, 100, 100], e: [122, 122, 100], ...ease }, { t: 36, s: [122, 122, 100], e: [100, 100, 100], ...ease }, { t: 72 } ] } },
+        shapes: [ { ty: "gr", it: circle(13, VIOLET) } ] } ] },
+    flag: { v: "5.7.4", fr: 30, ip: 0, op: 90, w: 48, h: 48, assets: [], layers: [
+      { ddd: 0, ind: 1, ty: 4, sr: 1, ip: 0, op: 90, st: 0, ks: {
+          o: { a: 0, k: 100 },
+          r: { a: 1, k: [ { t: 0, s: [0], e: [7], ...ease }, { t: 45, s: [7], e: [0], ...ease }, { t: 90 } ] },
+          p: { a: 0, k: [17, 12, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } },
+        shapes: [ { ty: "gr", it: [
+          { ty: "sh", ks: { a: 0, k: { c: true, i: [[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0]], v: [[0, 0], [17, 4.5], [0, 9]] } } },
+          { ty: "fl", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] },
+      { ddd: 0, ind: 2, ty: 4, sr: 1, ip: 0, op: 90, st: 0, ks: {
+          o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [16, 25, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } },
+        shapes: [ { ty: "gr", it: [
+          { ty: "rc", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [2.6, 27] }, r: { a: 0, k: 1.3 } },
+          { ty: "fl", c: { a: 0, k: INK }, o: { a: 0, k: 100 } },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] } ] },
+    check: { v: "5.7.4", fr: 30, ip: 0, op: 96, w: 48, h: 48, assets: [], layers: [
+      { ddd: 0, ind: 1, ty: 4, sr: 1, ip: 0, op: 96, st: 0, ks: {
+          o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [24, 24, 0] }, a: { a: 0, k: [0, 0, 0] },
+          s: { a: 1, k: [ { t: 0, s: [0, 0, 100], e: [115, 115, 100], ...ease }, { t: 14, s: [115, 115, 100], e: [100, 100, 100], ...ease }, { t: 22, s: [100, 100, 100], e: [100, 100, 100], ...ease }, { t: 96 } ] } },
+        shapes: [
+          { ty: "gr", it: [
+            { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [30, 30] } },
+            { ty: "st", c: { a: 0, k: GREEN }, o: { a: 0, k: 100 }, w: { a: 0, k: 2.5 } },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] },
+          { ty: "gr", it: [
+            { ty: "sh", ks: { a: 0, k: { c: false, i: [[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0]], v: [[-6, 0.5], [-1.5, 5], [6.5, -5]] } } },
+            { ty: "st", c: { a: 0, k: GREEN }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2, lj: 2 },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] } ] },
+    lock: { v: "5.7.4", fr: 30, ip: 0, op: 84, w: 48, h: 48, assets: [], layers: [
+      { ddd: 0, ind: 1, ty: 4, sr: 1, ip: 0, op: 84, st: 0, ks: {
+          o: { a: 0, k: 100 }, r: { a: 0, k: 0 },
+          p: { a: 1, k: [ { t: 0, s: [24, 25, 0], e: [24, 22.5, 0], ...ease, to: [0,0,0], ti: [0,0,0] }, { t: 42, s: [24, 22.5, 0], e: [24, 25, 0], ...ease, to: [0,0,0], ti: [0,0,0] }, { t: 84 } ] },
+          a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } },
+        shapes: [
+          { ty: "gr", it: [
+            { ty: "rc", p: { a: 0, k: [0, 5] }, s: { a: 0, k: [20, 15] }, r: { a: 0, k: 3.5 } },
+            { ty: "fl", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 } },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] },
+          { ty: "gr", it: [
+            { ty: "sh", ks: { a: 0, k: { c: false, i: [[0,0],[0,-3.9],[0,0]], o: [[0,-3.9],[0,0],[0,0]], v: [[-6, -2.5], [6, -2.5], [6, -2.5]] } } },
+            { ty: "st", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2 },
+            { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] } ] },
+  };
+  if (window.lottie) {
+    document.querySelectorAll("[data-lottie]").forEach((el) => {
+      const a = lottie.loadAnimation({ container: el, renderer: "svg", loop: true, autoplay: !reduced, animationData: anims[el.dataset.lottie] });
+      if (reduced) a.goToAndStop(a.totalFrames - 1, true);
+    });
+  }
 
   // CTA: use the Web Store URL when present, explain otherwise
   document.getElementById("install").addEventListener("click", (e) => {
