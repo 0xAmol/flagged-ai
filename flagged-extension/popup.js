@@ -1,128 +1,112 @@
-// popup.js — flag.ai popup
-let tabUrl = null;
-let selectedSignals = [];
-
+// popup.js — flagged.ai v0.3, VPN-style controller
+let tabUrl = null, tabId = null;
 const $ = (id) => document.getElementById(id);
 
 init();
 
 async function init() {
-  // Context menu flow passes ?url=...; otherwise use the active tab.
-  const qp = new URLSearchParams(location.search);
-  if (qp.get("url")) {
-    tabUrl = qp.get("url");
-  } else {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    tabUrl = tab && tab.url ? tab.url : null;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  tabUrl = tab && tab.url ? tab.url : null;
+  tabId = tab ? tab.id : null;
+  if (tabUrl && /^https?:/.test(tabUrl)) {
+    try { $("host").textContent = new URL(tabUrl).hostname.replace(/^www\./, ""); } catch {}
   }
 
-  if (!tabUrl || !/^https?:/.test(tabUrl)) {
-    $("status").innerHTML = `<span class="badge unverified">n/a</span>
-      <p class="note">This page can't be flagged (browser or extension page).</p>`;
-    return;
-  }
+  const st = await chrome.storage.local.get(["flagged_on", "flagged_stats"]);
+  renderPower(st.flagged_on === true);
+  renderStats(st.flagged_stats || { pages: 0, sigs: 0 });
 
-  try { $("host").textContent = new URL(tabUrl).hostname.replace(/^www\./, ""); } catch {}
-  render();
+  $("power").onclick = toggle;
+  $("deepscan").onclick = deepScan;
+
+  // stats update live while popup is open
+  chrome.storage.onChanged.addListener((chg) => {
+    if (chg.flagged_stats) renderStats(chg.flagged_stats.newValue || { pages: 0, sigs: 0 });
+  });
+
+  renderLedger();
 }
 
-async function render() {
-  const flags = await FlagDB.getFlagsForUrl(tabUrl);
+function renderPower(on) {
+  $("power").classList.toggle("on", on);
+  $("zone").classList.toggle("on", on);
+  const s = $("status");
+  s.classList.toggle("on", on);
+  s.innerHTML = on
+    ? 'Scanning on<span class="sub">AI signatures will be marked on pages as you browse</span>'
+    : 'Not scanning<span class="sub">Turn on to mark AI signatures on the pages you visit</span>';
+  $("deepscan").disabled = !on;
+  $("deephint").textContent = on
+    ? "LLM signature analysis of this page's text"
+    : "LLM signature analysis · turn scanning on first";
+}
 
-  if (flags.length === 0) {
-    $("status").innerHTML = `<span class="badge clean">no flags on record</span>
-      <p class="note">Nobody has flagged this page yet. Think it's AI? Put it on the record.</p>`;
-    renderForm();
+async function toggle() {
+  const st = await chrome.storage.local.get("flagged_on");
+  const on = !(st.flagged_on === true);
+  await chrome.storage.local.set({ flagged_on: on });
+  renderPower(on);
+  // nudge every open tab so bubbles appear/disappear immediately
+  const tabs = await chrome.tabs.query({});
+  for (const t of tabs) {
+    if (t.id && t.url && /^https?:/.test(t.url)) {
+      chrome.tabs.sendMessage(t.id, { type: on ? "flagged-scan" : "flagged-clear" }).catch(() => {});
+    }
+  }
+}
+
+function renderStats(s) {
+  $("st-pages").textContent = s.pages || 0;
+  $("st-sigs").textContent = s.sigs || 0;
+}
+
+async function deepScan() {
+  if (!tabId) return;
+  $("toast").textContent = "Analyzing page text…";
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: "flagged-deepscan" });
+    if (res && res.ok) {
+      $("toast").textContent = res.found
+        ? `Analysis done: ${res.found} signature${res.found === 1 ? "" : "s"} marked on the page`
+        : "Analysis done: no strong AI signatures in this page's text";
+    } else {
+      $("toast").textContent = (res && res.error) || "Deep scan unavailable";
+    }
+  } catch {
+    $("toast").textContent = "Reload the page once, then try again";
+  }
+  setTimeout(() => ($("toast").textContent = ""), 5000);
+}
+
+// ---- community record (secondary) ----
+async function renderLedger() {
+  if (!tabUrl || !/^https?:/.test(tabUrl)) return;
+  let flags = [];
+  try { flags = await FlagDB.getFlagsForUrl(tabUrl); } catch { return; }
+  const box = $("ledger"), body = $("ledger-body");
+  box.hidden = false;
+  if (!flags.length) {
+    body.innerHTML = '<span class="badge clean">no flags on record</span>';
     return;
   }
-
   const f = flags[0];
   const status = FlagDB.statusOf(f);
   const myVote = await FlagDB.getMyVote(f.id);
-  const total = (f.votes.confirm || 0) + (f.votes.dispute || 0);
-  const chips = (f.signals || [])
-    .map((sid) => {
-      const s = FlagDB.SIGNALS.find((x) => x.id === sid);
-      return s ? `<span class="chip">${s.label}</span>` : "";
-    })
-    .join("");
-
-  $("status").innerHTML = `
-    <span class="badge ${status}">${
-      status === "confirmed" ? "AI · confirmed" :
-      status === "unverified" ? "AI · unverified" : status
-    }</span>
-    <div class="chips">${chips}</div>
-    ${f.note ? `<p class="note">${escapeHtml(f.note)}</p>` : ""}
-    <div class="counts">${f.votes.confirm || 0} confirm · ${f.votes.dispute || 0} dispute${
-      total < 3 ? ` · needs ${3 - total} more` : ""
-    }</div>
-    <div class="row">
-      <button class="confirm ${myVote === "confirm" ? "active" : ""}" id="vc" ${myVote ? "disabled" : ""}>
-        ${myVote === "confirm" ? "✓ Confirmed" : "Confirm AI"}
-      </button>
-      <button class="dispute ${myVote === "dispute" ? "active" : ""}" id="vd" ${myVote ? "disabled" : ""}>
-        ${myVote === "dispute" ? "✓ Disputed" : "Dispute"}
-      </button>
+  const label = status === "confirmed" ? "AI · confirmed" : status === "unverified" ? "AI · unverified" : status;
+  body.innerHTML = `
+    <span class="badge ${status}">${label}</span>
+    ${f.note ? `<div style="margin-top:8px;font-size:12.5px;line-height:1.45">${escapeHtml(f.note)}</div>` : ""}
+    <div class="counts">${f.votes.confirm || 0} confirm · ${f.votes.dispute || 0} dispute</div>
+    <div class="vrow">
+      <button class="confirm ${myVote === "confirm" ? "active" : ""}" id="vc" ${myVote ? "disabled" : ""}>${myVote === "confirm" ? "✓ Confirmed" : "Confirm AI"}</button>
+      <button class="dispute ${myVote === "dispute" ? "active" : ""}" id="vd" ${myVote ? "disabled" : ""}>${myVote === "dispute" ? "✓ Disputed" : "Dispute"}</button>
     </div>`;
-  $("flagform").innerHTML = "";
-
   if (!myVote) {
-    $("vc").onclick = async () => { await FlagDB.voteFlag(f.id, "confirm"); render(); pingTab(); };
-    $("vd").onclick = async () => { await FlagDB.voteFlag(f.id, "dispute"); render(); pingTab(); };
+    $("vc").onclick = async () => { await FlagDB.voteFlag(f.id, "confirm"); renderLedger(); };
+    $("vd").onclick = async () => { await FlagDB.voteFlag(f.id, "dispute"); renderLedger(); };
   }
 }
 
-function renderForm() {
-  const type = FlagDB.detectType(tabUrl);
-  $("flagform").innerHTML = `
-    <div class="label">Signatures — what gives it away?</div>
-    <div class="signals" id="sigs">
-      ${FlagDB.SIGNALS.map((s) => `<button class="sig" data-id="${s.id}">${s.label}</button>`).join("")}
-    </div>
-    <div class="label">Evidence (optional)</div>
-    <textarea id="note" rows="2" maxlength="280" placeholder="Detector score, the exact artifact, timestamps…"></textarea>
-    <div class="err" id="err" hidden></div>
-    <div class="row"><button class="primary" id="submit">Flag as AI · ${type}</button></div>
-    <div class="fine">Flags are public on the flag.ai record.</div>`;
-
-  document.querySelectorAll(".sig").forEach((btn) => {
-    btn.onclick = () => {
-      const id = btn.dataset.id;
-      if (selectedSignals.includes(id)) {
-        selectedSignals = selectedSignals.filter((x) => x !== id);
-        btn.classList.remove("on");
-      } else {
-        selectedSignals.push(id);
-        btn.classList.add("on");
-      }
-      $("err").hidden = true;
-    };
-  });
-
-  $("submit").onclick = async () => {
-    if (selectedSignals.length === 0) {
-      $("err").textContent = "Pick at least one signature — flags need evidence.";
-      $("err").hidden = false;
-      return;
-    }
-    await FlagDB.addFlag({ url: tabUrl, type, signals: selectedSignals, note: $("note").value });
-    selectedSignals = [];
-    render();
-    pingTab();
-  };
-}
-
-// Tell the content script on the active tab to refresh its banner.
-async function pingTab() {
-  try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.id) chrome.tabs.sendMessage(tab.id, { type: "flagai-refresh" });
-  } catch {}
-}
-
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }

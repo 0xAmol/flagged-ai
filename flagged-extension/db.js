@@ -4,7 +4,7 @@
 // extension keeps working offline / before you've deployed the backend.
 
 const FlagDB = (() => {
-  const API = "https://flagged-api.vercel.app"; // <- set to https://api.flagged.ai when deployed
+  const API = "http://localhost:8787"; // <- set to https://api.flagged.ai when deployed
   const KEY_STORE = "flagged_identity_key";
   const LOCAL_KEY = "flagged_local_flags";
   const VOTES_KEY = "flagged_my_votes";
@@ -156,7 +156,7 @@ const FlagDB = (() => {
     return pct >= 70 ? "confirmed" : pct <= 40 ? "disputed" : "contested";
   }
 
-  return { normalizeUrl, detectType, SIGNALS, getFlagsForUrl, addFlag, voteFlag, getMyVote, getRecentFlags, statusOf, identity };
+  return { API, normalizeUrl, detectType, SIGNALS, getFlagsForUrl, addFlag, voteFlag, getMyVote, getRecentFlags, statusOf, identity };
 })();
 
 if (typeof self !== "undefined") self.FlagDB = FlagDB;

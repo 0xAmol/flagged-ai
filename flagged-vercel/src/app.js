@@ -186,6 +186,62 @@ app.get("/v1/submitters/:key", async (c) => {
   });
 });
 
+
+// LLM signature analysis. Permissionless like everything else, but it costs
+// the operator real money per call, so it only turns on when the server has
+// an ANTHROPIC_API_KEY, and it's capped per key and globally per day.
+app.post("/v1/analyze", async (c) => {
+  if (!process.env.ANTHROPIC_API_KEY) return err(c, 501, "LLM analysis not enabled on this server");
+  const key = clientKey(c);
+  const now = Date.now();
+  await sql`create table if not exists analyze_log (key text not null, ts bigint not null)`;
+  const [{ n: mine }] = await sql`select count(*)::int n from analyze_log where key=${key} and ts > ${now - 86400000}`;
+  if (mine >= Number(process.env.ANALYZE_DAILY_PER_KEY || 50)) return err(c, 429, "daily analysis budget reached for this key");
+  const [{ n: all }] = await sql`select count(*)::int n from analyze_log where ts > ${now - 86400000}`;
+  if (all >= Number(process.env.ANALYZE_DAILY_GLOBAL || 1000)) return err(c, 429, "global daily analysis budget reached");
+
+  let body;
+  try { body = await c.req.json(); } catch { return err(c, 400, "json body required"); }
+  const text = String(body?.text || "").slice(0, 6000);
+  if (text.length < 200) return err(c, 400, "text too short to analyze (min 200 chars)");
+
+  const prompt = `You analyze text for signatures of AI generation. Respond with ONLY a JSON object, no markdown, in this exact shape:
+{"likelihood": <0..1>, "signals": [{"id": "phrasing|facts|detector", "label": "<short signature name>", "evidence": "<short quote or observation from the text>"}]}
+Rules: likelihood is your honest estimate that this text is substantially AI-generated. Include at most 5 signals, each grounded in the actual text. If the text seems human-written, return likelihood below 0.5 and an empty signals array. Never invent evidence.
+
+TEXT:
+${text}`;
+
+  let out;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: process.env.ANALYZE_MODEL || "claude-haiku-4-5",
+        max_tokens: 500,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) return err(c, 502, "analysis model error");
+    const raw = (data.content || []).map((b) => b.text || "").join("").replace(/```json|```/g, "").trim();
+    out = JSON.parse(raw);
+  } catch {
+    return err(c, 502, "analysis failed");
+  }
+  await sql`insert into analyze_log (key, ts) values (${key}, ${now})`;
+  return c.json({
+    likelihood: Math.max(0, Math.min(1, Number(out.likelihood) || 0)),
+    signals: Array.isArray(out.signals) ? out.signals.slice(0, 5) : [],
+    note: "model judgment, not proof",
+  });
+});
+
 app.get("/v1/stats", async (c) => {
   const [f] = await sql`select count(*)::int n, count(*) filter (where submitter_kind='agent')::int a from flags`;
   const [v] = await sql`select count(*)::int n from votes`;

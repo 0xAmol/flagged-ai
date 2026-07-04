@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "flagged.ai — AI content scanner",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Flag AI-generated content where you find it, and see what the crowd has already flagged.",
   "permissions": ["storage", "activeTab", "contextMenus", "tabs"],
-  "host_permissions": ["<all_urls>", "https://flagged-api.vercel.app/*"],
+  "host_permissions": ["<all_urls>", "http://localhost:8787/*"],
   "action": {
     "default_popup": "popup.html",
     "default_title": "flag.ai — is this AI?"
