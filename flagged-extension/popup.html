@@ -5,30 +5,38 @@
 <style>
   :root {
     --ink: #17191C; --paper: #F6F7F5; --card: #fff; --rule: #E3E5E0;
-    --flag: #6D4AE6; --flag-bg: #F3EFFE; --dispute: #B0770F;
-    --confirm: #4630B8; --muted: #7B8087; --ok: #177A4C;
+    --on: #16A34A; --on-deep: #15803D; --alert: #DC2626; --alert-deep: #B91C1C;
+    --muted: #7B8087; --ok: #16A34A;
   }
   * { box-sizing: border-box; margin: 0; }
   body { width: 340px; font-family: system-ui, sans-serif; background: var(--paper); color: var(--ink); font-size: 13px; }
   header { background: var(--card); border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
   .wordmark { font-weight: 800; font-size: 16px; }
-  .wordmark span { color: var(--flag); }
+  .wordmark span { color: var(--on); }
   .url { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .power-zone { padding: 26px 16px 18px; text-align: center; transition: background .3s; }
-  .power-zone.on { background: linear-gradient(180deg, #EFEAFE 0%, var(--paper) 100%); }
+  .power-zone.on { background: linear-gradient(180deg, #E9F7EE 0%, var(--paper) 100%); }
+  .power-wrap { position: relative; width: 108px; height: 108px; margin: 0 auto; }
+  .ring { position: absolute; inset: 0; transform: rotate(-90deg); pointer-events: none; }
+  .ring circle {
+    fill: none; stroke: var(--on); stroke-width: 4; stroke-linecap: round;
+    stroke-dasharray: 302; stroke-dashoffset: 302;
+    transition: stroke-dashoffset .65s cubic-bezier(.4,0,.2,1), stroke .3s;
+  }
+  .power-wrap.on .ring circle { stroke-dashoffset: 0; }
   .power {
-    width: 92px; height: 92px; border-radius: 50%; cursor: pointer;
-    border: none; position: relative; margin: 0 auto; display: block;
-    background: var(--ink); transition: background .25s, box-shadow .25s;
+    position: absolute; inset: 8px; width: 92px; height: 92px; border-radius: 50%;
+    cursor: pointer; border: none; display: block;
+    background: var(--ink); transition: background .3s, box-shadow .3s;
   }
   .power:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   .power svg { width: 38px; height: 38px; stroke: #98A0A8; transition: stroke .25s; }
-  .power.on { background: var(--flag); box-shadow: 0 0 0 10px rgba(109,74,230,.12), 0 0 0 22px rgba(109,74,230,.05); }
+  .power.on { background: var(--on); box-shadow: 0 0 0 10px rgba(22,163,74,.12), 0 0 0 22px rgba(22,163,74,.05); }
   .power.on svg { stroke: #fff; }
-  .status { margin-top: 14px; font-weight: 700; font-size: 16px; }
+  .status { margin-top: 14px; font-weight: 700; font-size: 16px; color: var(--alert); }
   .status .sub { display: block; font-weight: 400; font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .status.on { color: var(--confirm); }
+  .status.on { color: var(--on-deep); }
 
   .stats { display: flex; gap: 8px; padding: 0 16px 14px; }
   .stat { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; }
@@ -48,17 +56,17 @@
   .ledger { margin: 4px 16px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px; }
   .ledger h4 { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; font-family: ui-monospace, monospace; }
   .badge { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border-radius: 4px; padding: 3px 7px; border: 1.5px solid; }
-  .badge.confirmed { color: var(--confirm); border-color: var(--confirm); }
+  .badge.confirmed { color: var(--alert-deep); border-color: var(--alert-deep); }
   .badge.unverified { color: var(--muted); border-color: var(--muted); }
-  .badge.contested, .badge.disputed { color: var(--dispute); border-color: var(--dispute); }
+  .badge.contested, .badge.disputed { color: #B45309; border-color: #B45309; }
   .badge.clean { color: var(--ok); border-color: var(--ok); }
   .counts { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); margin-top: 8px; }
   .vrow { display: flex; gap: 6px; margin-top: 10px; }
   .vrow button { flex: 1; cursor: pointer; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 10px; border: 1.5px solid var(--rule); background: transparent; }
-  .vrow .confirm { border-color: var(--flag); color: var(--flag); }
-  .vrow .confirm.active { background: var(--flag); color: #fff; }
-  .vrow .dispute { border-color: var(--dispute); color: var(--dispute); }
-  .vrow .dispute.active { background: var(--dispute); color: #fff; }
+  .vrow .confirm { border-color: var(--alert); color: var(--alert); }
+  .vrow .confirm.active { background: var(--alert); color: #fff; }
+  .vrow .dispute { border-color: var(--muted); color: #52575C; }
+  .vrow .dispute.active { background: var(--muted); color: #fff; }
   .vrow button:disabled { opacity: .4; cursor: default; }
   .toast { margin: 0 16px 14px; font-size: 12px; color: var(--muted); text-align: center; min-height: 15px; }
 </style>
@@ -70,11 +78,14 @@
   </header>
 
   <div class="power-zone" id="zone">
-    <button class="power" id="power" aria-label="Toggle scanning">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round">
-        <path d="M12 3v9"/><path d="M6.2 6.2a8 8 0 1 0 11.6 0"/>
-      </svg>
-    </button>
+    <div class="power-wrap" id="pwrap">
+      <svg class="ring" viewBox="0 0 108 108"><circle cx="54" cy="54" r="48"/></svg>
+      <button class="power" id="power" aria-label="Toggle scanning">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round">
+          <path d="M12 3v9"/><path d="M6.2 6.2a8 8 0 1 0 11.6 0"/>
+        </svg>
+      </button>
+    </div>
     <div class="status" id="status">Not scanning<span class="sub">Turn on to mark AI signatures on the pages you visit</span></div>
   </div>
 

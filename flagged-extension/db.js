@@ -60,14 +60,26 @@ const FlagDB = (() => {
     { id: "disclosed", label: "Self-disclosed" },
   ];
 
+  // All network calls go through the background worker: content scripts on
+  // strict-CSP sites (x.com, banks, etc.) can't fetch cross-origin directly.
+  function relayFetch(url, options) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage({ type: "flagged-fetch", url, options }, (res) => {
+        if (chrome.runtime.lastError || !res) reject(new Error("relay unavailable"));
+        else resolve(res);
+      });
+    });
+  }
+
   async function api(path, opts = {}) {
     const key = await identity();
-    const res = await fetch(API + path, {
+    const res = await relayFetch(API + path, {
       ...opts,
       headers: { "content-type": "application/json", "x-flagged-key": key, ...(opts.headers || {}) },
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status, data });
+    let data = {};
+    try { data = JSON.parse(res.body || "{}"); } catch {}
+    if (!res.ok) throw Object.assign(new Error(data.error || "request failed"), { status: res.status, data });
     return data;
   }
 

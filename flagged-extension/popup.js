@@ -29,6 +29,7 @@ async function init() {
 
 function renderPower(on) {
   $("power").classList.toggle("on", on);
+  $("pwrap").classList.toggle("on", on);
   $("zone").classList.toggle("on", on);
   const s = $("status");
   s.classList.toggle("on", on);
