@@ -13,7 +13,22 @@
   // ---------- signature detectors (on-device, evidence-first) ----------
 
   // Disclosure phrases: platforms and creators labeling AI content.
-  const DISCLOSURE = /made\s+with\s+@?\s?(grok|imagine|ai\b)|grok\s*@?\s*imagine|created\s+with\s+@?(dall|midjourney|sora|imagen|firefly|veo)|ai[- ]generated|generated\s+(by|with)\s+@?(ai|chatgpt|claude|gemini|grok|sora)|synthid/i;
+  const DISCLOSURE_STRONG = /made\s+with\s+@?\s?(grok|imagine)|grok\s*@?\s*imagine|created\s+with\s+@?(dall|midjourney|sora|imagen|firefly|veo)|generated\s+(by|with)\s+@?(chatgpt|claude|gemini|grok|sora|midjourney)|synthid/i;
+  const DISCLOSURE_WEAK = /\bai[- ]generated\b(?:\s+([a-z]+))?|\bmade\s+with\s+ai\b|\bgenerated\s+(?:by|with)\s+ai\b/i;
+  const MEDIA_NOUNS = new Set(["image","images","imagery","video","videos","photo","photos","picture","pictures","art","artwork","content","audio","voice","music","clip","clips","footage","avatar","portrait","render","animation"]);
+  // Returns a matched disclosure string, or null. Bare "AI-generated" only
+  // counts when it labels media ("AI-generated image") or stands alone as a
+  // short label; "AI-generated domains/names/logos" is product marketing.
+  function disclosureIn(t) {
+    const strong = t.match(DISCLOSURE_STRONG);
+    if (strong) return strong[0];
+    const weak = t.match(DISCLOSURE_WEAK);
+    if (!weak) return null;
+    const next = (weak[1] || "").toLowerCase();
+    if (next && !MEDIA_NOUNS.has(next)) return null;
+    if (!next && t.length > 80) return null;
+    return weak[0];
+  }
 
   // Generator-hosted media: provenance by address.
   const GEN_HOSTS = /(midjourney|civitai|oaiusercontent|openai|replicate\.delivery|leonardo\.ai|ideogram\.ai|imagine\.grok|fal\.media|runwayml)/i;
@@ -206,10 +221,10 @@
       if (hits >= 6) break;
       if (disclosed.has(el)) continue;
       const t = (el.textContent || "").replace(/\s+/g, " ").trim();
-      const m = t.match(DISCLOSURE);
+      const m = disclosureIn(t);
       if (m && t.length < 600 && el.getClientRects().length) {
         disclosed.add(el); hits++;
-        const i = Math.max(0, t.toLowerCase().indexOf(m[0].toLowerCase()) - 5);
+        const i = Math.max(0, t.toLowerCase().indexOf(m.toLowerCase()) - 5);
         bubble(el, "AI signature: self-disclosed", [
           { id: "disclosed", label: "Self-disclosed", evidence: '"…' + t.slice(i, i + 70).trim() + '…"' },
         ], "hard");
@@ -220,7 +235,7 @@
       if (hits >= 6) break;
       if (disclosed.has(el) || el.closest('[data-testid="tweetText"]')) continue;
       const t = (el.textContent || "").trim();
-      if (t.length > 4 && t.length < 120 && DISCLOSURE.test(t) && el.getClientRects().length) {
+      if (t.length > 4 && t.length < 120 && disclosureIn(t) && el.getClientRects().length) {
         disclosed.add(el); hits++;
         bubble(el, "AI signature: self-disclosed", [
           { id: "disclosed", label: "Self-disclosed", evidence: '"' + t.slice(0, 80) + '"' },
