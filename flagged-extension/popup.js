@@ -103,8 +103,16 @@ async function renderLedger() {
       <button class="dispute ${myVote === "dispute" ? "active" : ""}" id="vd" ${myVote ? "disabled" : ""}>${myVote === "dispute" ? "✓ Disputed" : "Dispute"}</button>
     </div>`;
   if (!myVote) {
-    $("vc").onclick = async () => { await FlagDB.voteFlag(f.id, "confirm"); renderLedger(); };
-    $("vd").onclick = async () => { await FlagDB.voteFlag(f.id, "dispute"); renderLedger(); };
+    const cast = async (side) => {
+      const r = await FlagDB.voteFlag(f.id, side);
+      if (r && r.ok === false && r.reason === "already-voted") {
+        $("toast").textContent = "Already counted: submitting a flag includes your confirm vote";
+        setTimeout(() => ($("toast").textContent = ""), 4500);
+      }
+      renderLedger();
+    };
+    $("vc").onclick = () => cast("confirm");
+    $("vd").onclick = () => cast("dispute");
   }
 }
 

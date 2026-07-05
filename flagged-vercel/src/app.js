@@ -242,6 +242,74 @@ ${text}`;
   });
 });
 
+
+// Vision analysis: fetch an image and ask the model to examine it for
+// generation/manipulation artifacts. Same permissionless caps as /v1/analyze.
+app.post("/v1/analyze-image", async (c) => {
+  if (!process.env.ANTHROPIC_API_KEY) return err(c, 501, "LLM analysis not enabled on this server");
+  const key = clientKey(c);
+  const now = Date.now();
+  await sql`create table if not exists analyze_log (key text not null, ts bigint not null)`;
+  const [{ n: mine }] = await sql`select count(*)::int n from analyze_log where key=${key} and ts > ${now - 86400000}`;
+  if (mine >= Number(process.env.ANALYZE_DAILY_PER_KEY || 50)) return err(c, 429, "daily analysis budget reached for this key");
+  const [{ n: all }] = await sql`select count(*)::int n from analyze_log where ts > ${now - 86400000}`;
+  if (all >= Number(process.env.ANALYZE_DAILY_GLOBAL || 1000)) return err(c, 429, "global daily analysis budget reached");
+
+  let body;
+  try { body = await c.req.json(); } catch { return err(c, 400, "json body required"); }
+  let imgUrl;
+  try {
+    imgUrl = new URL(String(body?.image_url || ""));
+    if (!/^https?:$/.test(imgUrl.protocol)) throw 0;
+  } catch { return err(c, 400, "valid image_url required"); }
+
+  let mediaType, b64;
+  try {
+    const r = await fetch(imgUrl.href, { headers: { accept: "image/*" } });
+    mediaType = (r.headers.get("content-type") || "").split(";")[0].trim();
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) return err(c, 415, "unsupported image type: " + mediaType);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 4_500_000) return err(c, 413, "image too large (4.5MB max)");
+    b64 = buf.toString("base64");
+  } catch { return err(c, 502, "could not fetch that image"); }
+
+  const prompt = `You are examining an image for signs of AI generation or AI manipulation. Look for: lighting and shadow direction consistency across the scene; blending or halo artifacts around objects (signs of insertion or replacement); rendering of any text, logos, or flags; anatomy and hands; texture repetition or over-smoothness; physically implausible details; compression inconsistencies between regions.
+Respond with ONLY a JSON object, no markdown:
+{"likelihood": <0..1 that this image is AI-generated or AI-edited>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>"}]}
+Rules: at most 5 signals, each tied to something actually visible. If regions differ (a real photo with one edited element), say which element and use category ai_edited. If you see no artifacts, likelihood below 0.5, empty signals, category likely_real or unclear. Never invent details.`;
+
+  let out;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: process.env.ANALYZE_MODEL || "claude-haiku-4-5",
+        max_tokens: 600,
+        messages: [{ role: "user", content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
+          { type: "text", text: prompt },
+        ]}],
+      }),
+    });
+    const data = await r.json();
+    if (!r.ok) return err(c, 502, "analysis model error");
+    const raw = (data.content || []).map((b) => b.text || "").join("").replace(/```json|```/g, "").trim();
+    out = JSON.parse(raw);
+  } catch { return err(c, 502, "analysis failed"); }
+  await sql`insert into analyze_log (key, ts) values (${key}, ${now})`;
+  return c.json({
+    likelihood: Math.max(0, Math.min(1, Number(out.likelihood) || 0)),
+    category: ["ai_generated","ai_edited","likely_real","unclear"].includes(out.category) ? out.category : "unclear",
+    signals: Array.isArray(out.signals) ? out.signals.slice(0, 5) : [],
+    note: "model judgment, not proof",
+  });
+});
+
 app.get("/v1/stats", async (c) => {
   const [f] = await sql`select count(*)::int n, count(*) filter (where submitter_kind='agent')::int a from flags`;
   const [v] = await sql`select count(*)::int n from votes`;

@@ -92,7 +92,7 @@
 
     const b = document.createElement("button");
     b.className = NS + "-bubble";
-    b.style.top = Math.max(2, p.top - 10) + "px";
+    b.style.top = Math.max(2, p.top - 26) + "px";
     b.style.left = Math.max(2, p.left + Math.min(p.width - 60, 8)) + "px";
     const dot = document.createElement("span"); dot.className = "dot";
     b.appendChild(dot);
@@ -149,6 +149,12 @@
         };
         actions.appendChild(fBtn);
       }
+      if (opts.reverseUrl) {
+        const rBtn = document.createElement("button");
+        rBtn.textContent = "Reverse search";
+        rBtn.onclick = () => window.open("https://lens.google.com/uploadbyurl?url=" + encodeURIComponent(opts.reverseUrl), "_blank");
+        actions.appendChild(rBtn);
+      }
       const x = document.createElement("button"); x.className = "close"; x.textContent = "×";
       x.onclick = () => { pop.remove(); pop = null; };
       pop.appendChild(x);
@@ -186,7 +192,7 @@
         seen.add(src);
         bubble(img, "AI signature: generator source", [
           { id: "reverse", label: "Provenance trace", evidence: "media served from a known AI-generation host" },
-        ], "hard", { flagUrl: src.startsWith("http") ? src : location.href });
+        ], "hard", { flagUrl: src.startsWith("http") ? src : location.href, reverseUrl: src });
       }
     }
   }
@@ -337,9 +343,65 @@
     }
   }, 1000);
 
+  async function analyzeImage(srcUrl) {
+    const clean = srcUrl.split("?")[0];
+    const img = [...document.querySelectorAll("img")].find((i) => {
+      const s2 = i.currentSrc || i.src || "";
+      return s2 === srcUrl || s2.split("?")[0] === clean;
+    }) || document.body;
+
+    const sigs = [];
+    let grade = "llm";
+    let title = null;
+
+    // metadata forensics first: free and provable when it hits
+    try {
+      const sniff = await new Promise((resolve) =>
+        chrome.runtime.sendMessage({ type: "flagged-sniff", url: srcUrl }, (r) => resolve(r || { markers: [] })));
+      if (sniff.markers && sniff.markers.length) {
+        grade = "hard";
+        title = "AI signature: provenance metadata";
+        for (const m of sniff.markers.slice(0, 3)) {
+          sigs.push({ id: "metadata", label: "Metadata marker", evidence: '"' + m + '" found in image bytes' });
+        }
+      }
+    } catch {}
+
+    // vision model
+    try {
+      const res = await new Promise((resolve, reject) =>
+        chrome.runtime.sendMessage({
+          type: "flagged-fetch",
+          url: (FlagDB.API || "https://flagged-api.vercel.app") + "/v1/analyze-image",
+          options: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image_url: srcUrl }) },
+        }, (r) => (chrome.runtime.lastError || !r) ? reject(new Error("relay")) : resolve(r)));
+      if (res.ok) {
+        const data = JSON.parse(res.body || "{}");
+        const cats = { ai_generated: "AI-generated", ai_edited: "AI-edited (real photo, altered)", likely_real: "no artifacts found", unclear: "inconclusive" };
+        if (!title) title = "Image analysis: " + (cats[data.category] || "inconclusive") +
+          (data.likelihood >= 0.5 ? " · " + Math.round(data.likelihood * 100) + "%" : "");
+        for (const sg of (data.signals || []).slice(0, 4)) {
+          sigs.push({ id: sg.id || "detector", label: sg.label || "Visual artifact", evidence: sg.evidence });
+        }
+        if (!sigs.length) sigs.push({ id: "detector", label: cats[data.category] || "Inconclusive", evidence: "no visible generation or manipulation artifacts" });
+      } else {
+        const errBody = (() => { try { return JSON.parse(res.body || "{}").error; } catch { return null; } })();
+        if (!sigs.length) { title = "Image analysis unavailable"; sigs.push({ id: "detector", label: "Not analyzed", evidence: errBody || "server declined (" + res.status + ")" }); }
+      }
+    } catch {
+      if (!sigs.length) { title = "Image analysis unavailable"; sigs.push({ id: "detector", label: "Not analyzed", evidence: "could not reach the analysis API" }); }
+    }
+
+    bubble(img, title || "Image analysis", sigs, grade, {
+      flagUrl: srcUrl.startsWith("http") ? srcUrl : location.href,
+      reverseUrl: srcUrl,
+    });
+  }
+
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!msg) return;
     if (msg.type === "flagged-scan") { scan(); }
+    if (msg.type === "flagged-analyze-image") { ensureOverlay(); analyzeImage(msg.srcUrl); }
     if (msg.type === "flagged-clear") { clearAll(); }
     if (msg.type === "flagged-refresh") { state().then((on) => on && scan()); }
     if (msg.type === "flagged-deepscan") {

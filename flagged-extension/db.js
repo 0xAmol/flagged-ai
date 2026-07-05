@@ -111,6 +111,12 @@ const FlagDB = (() => {
         method: "POST",
         body: JSON.stringify({ url, type, signals, note }),
       });
+      if (!data.duplicate && data.flag) {
+        // submitting counts as your confirm vote on the server; mirror it locally
+        const votes = await chrome.storage.local.get(VOTES_KEY);
+        const mv = votes[VOTES_KEY] || {}; mv[data.flag.id] = "confirm";
+        await chrome.storage.local.set({ [VOTES_KEY]: mv });
+      }
       return { flag: data.flag, duplicate: data.duplicate };
     } catch (e) {
       if (e.status) throw e; // server rejected (budget, validation) — surface it
@@ -143,7 +149,9 @@ const FlagDB = (() => {
     } catch (e) {
       if (e.status === 409) {
         const votes = await chrome.storage.local.get(VOTES_KEY);
-        const mv = votes[VOTES_KEY] || {}; if (!mv[id]) { mv[id] = side; await chrome.storage.local.set({ [VOTES_KEY]: mv }); }
+        // no local record + server says already-voted means this flag was ours:
+        // submission auto-counts as a confirm
+        const mv = votes[VOTES_KEY] || {}; if (!mv[id]) { mv[id] = "confirm"; await chrome.storage.local.set({ [VOTES_KEY]: mv }); }
         return { ok: false, reason: "already-voted" };
       }
       return { ok: false, reason: e.message };
