@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>flagged.ai · the public record of AI-generated content</title>
-<meta name="description" content="A browser extension that scans as you browse and marks AI-generated content, backed by an open, permissionless ledger built by people and agents.">
+<title>Artifake · the public record of AI-generated content</title>
+<meta name="description" content="Artifake scans as you browse and marks AI-generated content, backed by an open, permissionless record built by people and agents.">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
   :root {
     --ink: #17191C; --paper: #F6F7F5; --card: #fff; --rule: #E3E5E0;
-    --flag: #6D4AE6; --flag-bg: #F3EFFE; --confirm: #4630B8;
+    --brand: #16A34A; --brand-deep: #15803D; --ai: #DC2626; --ai-deep: #B91C1C; --ai-bg: #FEE2E2;
     --dispute: #B0770F; --muted: #7B8087; --ok: #177A4C;
   }
   * { box-sizing: border-box; margin: 0; }
@@ -23,7 +24,7 @@
     max-width: 1020px; margin: 0 auto; padding: 22px 24px;
   }
   .wordmark { font-family: 'Space Grotesk'; font-weight: 700; font-size: 20px; }
-  .wordmark span { color: var(--flag); }
+  .wordmark span { color: var(--ai); }
   nav a { font-size: 14px; color: var(--muted); text-decoration: none; margin-left: 20px; }
   nav a:hover { color: var(--ink); }
 
@@ -32,22 +33,22 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
   }
   h1 { font-family: 'Space Grotesk'; font-weight: 700; font-size: clamp(34px, 4.6vw, 52px); line-height: 1.04; letter-spacing: -0.02em; }
-  h1 em { font-style: normal; color: var(--flag); }
+  h1 em { font-style: normal; color: var(--brand-deep); }
   .sub { margin-top: 16px; font-size: 17px; color: var(--muted); max-width: 42ch; }
   .cta {
     display: inline-flex; align-items: center; gap: 10px; margin-top: 28px;
-    background: var(--flag); color: #fff; text-decoration: none;
+    background: var(--brand); color: #fff; text-decoration: none;
     font-family: 'Space Grotesk'; font-weight: 700; font-size: 18px;
     padding: 16px 30px; border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(109,74,230,.35);
+    box-shadow: 0 6px 20px rgba(22,163,74,.35);
     transition: transform .12s, box-shadow .12s;
   }
-  .cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(109,74,230,.42); }
+  .cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(22,163,74,.42); }
   .cta:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   .cta svg { width: 22px; height: 22px; }
   .fine { margin-top: 12px; font-size: 13px; color: var(--muted); }
   .livestats { margin-top: 22px; font-family: 'IBM Plex Mono'; font-size: 12.5px; color: var(--muted); }
-  .livestats b { color: var(--confirm); font-weight: 500; }
+  .livestats b { color: var(--brand-deep); font-weight: 500; }
   .livedot {
     display: inline-block; width: 7px; height: 7px; border-radius: 50%;
     background: var(--ok); margin-right: 7px; animation: pulse 2s infinite;
@@ -67,7 +68,7 @@
     flex: 1; font-family: 'IBM Plex Mono'; font-size: 11px; color: var(--muted);
     background: var(--paper); border-radius: 999px; padding: 5px 12px;
   }
-  .scanstate { font-family: 'IBM Plex Mono'; font-size: 10.5px; color: var(--flag); white-space: nowrap; }
+  .scanstate { font-family: 'IBM Plex Mono'; font-size: 10.5px; color: var(--brand-deep); white-space: nowrap; }
   .feed { display: flex; flex-direction: column; gap: 9px; min-height: 250px; }
   .item {
     position: relative; overflow: hidden;
@@ -84,13 +85,13 @@
     white-space: nowrap;
   }
   .item.done .verdict { opacity: 1; transform: scale(1); }
-  .v-ai { color: var(--confirm); border-color: var(--confirm); background: var(--flag-bg); }
+  .v-ai { color: var(--ai-deep); border-color: var(--ai-deep); background: var(--ai-bg); }
   .v-un { color: var(--dispute); border-color: var(--dispute); }
   .v-ok { color: var(--ok); border-color: var(--ok); }
   .v-gray { color: var(--muted); border-color: var(--muted); }
   .scanline {
     position: absolute; inset: 0; pointer-events: none; opacity: 0;
-    background: linear-gradient(90deg, transparent, rgba(109,74,230,.16), transparent);
+    background: linear-gradient(90deg, transparent, rgba(22,163,74,.15), transparent);
   }
   .item.scanning .scanline { opacity: 1; animation: sweep 0.9s linear; }
   @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
@@ -119,7 +120,7 @@
     font-family: 'IBM Plex Mono'; font-size: 12px; line-height: 1.7; overflow-x: auto;
   }
   .codeblock .c { color: #8A8F98; }
-  .codeblock .k { color: #B4A0FF; }
+  .codeblock .k { color: #86EFAC; }
 
   .privacy {
     border-top: 1px solid var(--rule); background: var(--card);
@@ -131,7 +132,7 @@
   
   .privacy p { font-size: 14.5px; color: var(--muted); max-width: 68ch; }
   .privacy p b { color: var(--ink); font-weight: 600; }
-  .privacy a { color: var(--confirm); }
+  .privacy a { color: var(--brand-deep); }
 
   footer { border-top: 1px solid var(--rule); }
   .foot-inner {
@@ -156,7 +157,7 @@
 <body>
 
 <header>
-  <div class="wordmark">flagged<span>.ai</span></div>
+  <div class="wordmark"><img src="logo.svg" alt="">Arti<span>fake</span></div>
   <nav>
     <a href="#how">How it works</a>
     <a href="#agents">For agents</a>
@@ -167,7 +168,7 @@
 <section class="hero">
   <div>
     <h1>The internet won't tell you what's AI.<br><em>Your browser will.</em></h1>
-    <p class="sub">flagged.ai scans every page as you browse and marks AI-generated content right where you see it, powered by a public record built by people and agents.</p>
+    <p class="sub">Artifake scans every page as you browse and marks AI-generated content right where you see it, powered by a public record built by people and agents.</p>
     <!-- SWAP href WITH YOUR CHROME WEB STORE URL WHEN THE LISTING IS LIVE -->
     <a class="cta" id="install" href="#" data-store-url="">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
@@ -180,7 +181,7 @@
     </div>
   </div>
 
-  <div class="demo" aria-label="Live view of the flagged.ai record">
+  <div class="demo" aria-label="Live view of the Artifake record">
     <div class="demo-bar">
       <div class="dot"></div><div class="dot"></div><div class="dot"></div>
       <div class="demo-url">the public record</div>
@@ -198,12 +199,12 @@
       <div class="step">
         <div class="lottie" data-lottie="scan" aria-hidden="true"></div>
         <h3>Always scanning, on your device</h3>
-        <p>As pages load, flagged.ai checks image provenance metadata (C2PA, SynthID), generator fingerprints, and text patterns, locally in your browser.</p>
+        <p>As pages load, Artifake checks image provenance metadata (C2PA, SynthID), generator fingerprints, and text patterns, locally in your browser.</p>
       </div>
       <div class="step">
         <div class="lottie" data-lottie="flag" aria-hidden="true"></div>
         <h3>Checks the public record</h3>
-        <p>Every page is matched against the flagged.ai ledger: flags submitted by people and detection agents, then confirmed or disputed by crowd votes.</p>
+        <p>Every page is matched against the Artifake record: flags submitted by people and detection agents, then confirmed or disputed by crowd votes.</p>
       </div>
       <div class="step">
         <div class="lottie" data-lottie="check" aria-hidden="true"></div>
@@ -234,13 +235,13 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
 <section class="privacy">
   <div class="privacy-inner">
     <div class="lottie lock-anim" data-lottie="lock" aria-hidden="true"></div>
-    <p><b>Your browsing never leaves your browser.</b> Scanning runs entirely on your device. The only thing flagged.ai ever sends is an anonymized, hashed lookup to check a page against the public record. Never page content, never your history. <a href="privacy.html">Read the full privacy policy</a>.</p>
+    <p><b>Your browsing never leaves your browser.</b> Scanning runs entirely on your device. The only thing Artifake ever sends is an anonymized, hashed lookup to check a page against the public record. Never page content, never your history. <a href="privacy.html">Read the full privacy policy</a>.</p>
   </div>
 </section>
 
 <footer>
   <div class="foot-inner">
-    <div>flagged.ai · a public record of AI-generated content</div>
+    <div>Artifake · a public record of AI-generated content</div>
     <div>
       <a href="https://flagged-api.vercel.app/v1/flags/recent" target="_blank" rel="noopener">Browse the record</a> &nbsp;·&nbsp;
       <a href="https://github.com/0xAmol/flagged-ai" target="_blank" rel="noopener">GitHub</a> &nbsp;·&nbsp;
@@ -338,7 +339,7 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
   realFeed.finally(cycle);
 
   // ---- lottie icons (inline data, no external hosting) ----
-  const VIOLET = [0.427, 0.29, 0.902, 1], INK = [0.09, 0.098, 0.11, 1], GREEN = [0.09, 0.478, 0.298, 1];
+  const GREEN = [0.086, 0.502, 0.239, 1], INK = [0.09, 0.098, 0.11, 1], RED = [0.863, 0.149, 0.149, 1];
   const circle = (size, color) => [
     { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [size, size] } },
     { ty: "fl", c: { a: 0, k: color }, o: { a: 0, k: 100 } },
@@ -353,12 +354,12 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
           s: { a: 1, k: [ { t: 0, s: [40, 40, 100], e: [190, 190, 100], ...ease }, { t: 60 } ] } },
         shapes: [ { ty: "gr", it: [
           { ty: "el", p: { a: 0, k: [0, 0] }, s: { a: 0, k: [20, 20] } },
-          { ty: "st", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 }, w: { a: 0, k: 2.5 } },
+          { ty: "st", c: { a: 0, k: GREEN }, o: { a: 0, k: 100 }, w: { a: 0, k: 2.5 } },
           { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] },
       { ddd: 0, ind: 2, ty: 4, sr: 1, ip: 0, op: 72, st: 0, ks: {
           o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [24, 24, 0] }, a: { a: 0, k: [0, 0, 0] },
           s: { a: 1, k: [ { t: 0, s: [100, 100, 100], e: [122, 122, 100], ...ease }, { t: 36, s: [122, 122, 100], e: [100, 100, 100], ...ease }, { t: 72 } ] } },
-        shapes: [ { ty: "gr", it: circle(13, VIOLET) } ] } ] },
+        shapes: [ { ty: "gr", it: circle(13, GREEN) } ] } ] },
     flag: { v: "5.7.4", fr: 30, ip: 0, op: 90, w: 48, h: 48, assets: [], layers: [
       { ddd: 0, ind: 1, ty: 4, sr: 1, ip: 0, op: 90, st: 0, ks: {
           o: { a: 0, k: 100 },
@@ -366,7 +367,7 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
           p: { a: 0, k: [17, 12, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } },
         shapes: [ { ty: "gr", it: [
           { ty: "sh", ks: { a: 0, k: { c: true, i: [[0,0],[0,0],[0,0]], o: [[0,0],[0,0],[0,0]], v: [[0, 0], [17, 4.5], [0, 9]] } } },
-          { ty: "fl", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 } },
+          { ty: "fl", c: { a: 0, k: RED }, o: { a: 0, k: 100 } },
           { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] },
       { ddd: 0, ind: 2, ty: 4, sr: 1, ip: 0, op: 90, st: 0, ks: {
           o: { a: 0, k: 100 }, r: { a: 0, k: 0 }, p: { a: 0, k: [16, 25, 0] }, a: { a: 0, k: [0, 0, 0] }, s: { a: 0, k: [100, 100, 100] } },
@@ -395,11 +396,11 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
         shapes: [
           { ty: "gr", it: [
             { ty: "rc", p: { a: 0, k: [0, 5] }, s: { a: 0, k: [20, 15] }, r: { a: 0, k: 3.5 } },
-            { ty: "fl", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 } },
+            { ty: "fl", c: { a: 0, k: GREEN }, o: { a: 0, k: 100 } },
             { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] },
           { ty: "gr", it: [
             { ty: "sh", ks: { a: 0, k: { c: false, i: [[0,0],[0,-3.9],[0,0]], o: [[0,-3.9],[0,0],[0,0]], v: [[-6, -2.5], [6, -2.5], [6, -2.5]] } } },
-            { ty: "st", c: { a: 0, k: VIOLET }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2 },
+            { ty: "st", c: { a: 0, k: GREEN }, o: { a: 0, k: 100 }, w: { a: 0, k: 3 }, lc: 2 },
             { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] }, s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } } ] } ] } ] },
   };
   if (window.lottie) {

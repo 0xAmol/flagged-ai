@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "flagged.ai — AI content scanner",
-  "version": "0.4.1",
+  "name": "Artifake — AI content scanner",
+  "version": "0.5.0",
   "description": "Flag AI-generated content where you find it, and see what the crowd has already flagged.",
   "permissions": ["storage", "activeTab", "contextMenus", "tabs"],
   "host_permissions": ["<all_urls>", "http://localhost:8787/*"],

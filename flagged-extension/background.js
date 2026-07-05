@@ -4,12 +4,12 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "flagai-flag-link",
-    title: "Flag as AI on flagged.ai",
+    title: "Flag as AI on Artifake",
     contexts: ["link", "page", "video"],
   });
   chrome.contextMenus.create({
     id: "flagai-scan-image",
-    title: "Deep scan image with flagged.ai",
+    title: "Deep scan image with Artifake",
     contexts: ["image"],
   });
 });

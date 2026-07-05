@@ -3,35 +3,35 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy · flagged.ai</title>
+<title>Privacy · Artifake</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap');
-  :root { --ink:#17191C; --paper:#F6F7F5; --rule:#E3E5E0; --flag:#6D4AE6; --muted:#7B8087; --confirm:#4630B8; }
+  :root { --ink:#17191C; --paper:#F6F7F5; --rule:#E3E5E0; --brand:#15803D; --ai:#DC2626; --muted:#7B8087; --confirm:#15803D; }
   * { box-sizing: border-box; margin: 0; }
   body { background: var(--paper); color: var(--ink); font: 16px/1.65 'Inter', system-ui, sans-serif; }
   header { display: flex; justify-content: space-between; align-items: center; max-width: 760px; margin: 0 auto; padding: 22px 24px; }
   .wordmark { font-family:'Space Grotesk'; font-weight:700; font-size:20px; text-decoration:none; color:var(--ink); }
-  .wordmark span { color: var(--flag); }
+  .wordmark span { color: var(--ai); }
   main { max-width: 760px; margin: 0 auto; padding: 24px 24px 80px; }
   h1 { font-family:'Space Grotesk'; font-size: 34px; line-height: 1.1; }
   .updated { font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); margin: 10px 0 34px; }
   h2 { font-family:'Space Grotesk'; font-size: 20px; margin: 34px 0 10px; }
   p { margin-bottom: 14px; max-width: 68ch; }
-  .tldr { background: #fff; border: 1.5px solid var(--flag); border-radius: 12px; padding: 18px 20px; margin-bottom: 8px; }
-  .tldr b { color: var(--confirm); }
+  .tldr { background: #fff; border: 1.5px solid var(--brand); border-radius: 12px; padding: 18px 20px; margin-bottom: 8px; }
+  .tldr b { color: var(--brand); }
   code { font-family:'IBM Plex Mono', monospace; font-size: 13px; background: #ECEDEA; border-radius: 4px; padding: 1px 6px; }
-  a { color: var(--confirm); }
+  a { color: var(--brand); }
   footer { border-top: 1px solid var(--rule); }
   .foot { max-width: 760px; margin: 0 auto; padding: 24px; font-size: 13px; color: var(--muted); }
 </style>
 </head>
 <body>
 <header>
-  <a class="wordmark" href="index.html">flagged<span>.ai</span></a>
+  <a class="wordmark" href="index.html">Arti<span>fake</span></a>
 </header>
 <main>
   <h1>Privacy policy</h1>
-  <div class="updated">Last updated: July 2026 · applies to the flagged.ai browser extension and website</div>
+  <div class="updated">Last updated: July 2026 · applies to the Artifake browser extension and website</div>
 
   <div class="tldr">
     <b>The short version:</b> scanning happens on your device. We never receive the pages you visit,
@@ -46,7 +46,7 @@
   on your device. Page content is never transmitted anywhere.</p>
 
   <h2>What the extension sends, exactly</h2>
-  <p>To check whether a page is on the flagged.ai public record, the extension computes a cryptographic
+  <p>To check whether a page is on the Artifake public record, the extension computes a cryptographic
   hash (SHA-256) of the page's normalized address and sends only the <b>first 8 characters</b> of that
   hash to our server. The server responds with every record whose hash begins with those characters,
   and the matching happens on your device. Because many different addresses share the same 8-character
@@ -76,7 +76,7 @@
   right-click flag option).</p>
 
   <h2>The public ledger</h2>
-  <p>The flagged.ai ledger is an open, permissionless database of claims about AI-generated content.
+  <p>The Artifake ledger is an open, permissionless database of claims about AI-generated content.
   Records in it are contributed by users and automated agents and are visible to everyone. If content
   you created has been flagged and you believe the flag is wrong, you can dispute it directly through
   the extension or the API. Disputed flags stop being shown once the crowd overrules them.</p>
@@ -90,6 +90,6 @@
   <p>If this policy changes, the date above changes with it, and material changes will be noted in the
   extension's update notes.</p>
 </main>
-<footer><div class="foot">flagged.ai · a public record of AI-generated content · <a href="index.html">home</a></div></footer>
+<footer><div class="foot">Artifake · a public record of AI-generated content · <a href="index.html">home</a></div></footer>
 </body>
 </html>
