@@ -158,8 +158,8 @@
           fBtn.disabled = true; fBtn.textContent = "Adding…";
           try {
             const note = ("Auto-detected: " + signals.map((s) => s.evidence || s.label).join("; ")).slice(0, 280);
-            await FlagDB.addFlag({ url: opts.flagUrl || location.href, signals: signals.map((s) => s.id), note });
-            fBtn.textContent = "✓ On the record";
+            const r = await FlagDB.addFlag({ url: opts.flagUrl || location.href, signals: signals.map((s) => s.id), note });
+            fBtn.textContent = (r.flag && r.flag.offline) ? "Saved locally · ledger unreachable" : "✓ On the record";
           } catch { fBtn.textContent = "Failed, try again"; fBtn.disabled = false; }
         };
         actions.appendChild(fBtn);

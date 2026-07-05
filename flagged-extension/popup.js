@@ -18,6 +18,7 @@ async function init() {
 
   $("power").onclick = toggle;
   $("deepscan").onclick = deepScan;
+  $("screenscan").onclick = screenScan;
 
   // stats update live while popup is open
   chrome.storage.onChanged.addListener((chg) => {
@@ -37,6 +38,7 @@ function renderPower(on) {
     ? 'Scanning on<span class="sub">AI signatures will be marked on pages as you browse</span>'
     : 'Not scanning<span class="sub">Turn on to mark AI signatures on the pages you visit</span>';
   $("deepscan").disabled = !on;
+  $("screenscan").disabled = !on;
   $("deephint").textContent = on
     ? "LLM signature analysis of this page's text"
     : "LLM signature analysis · turn scanning on first";
@@ -118,4 +120,56 @@ async function renderLedger() {
 
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+
+// ---- scan visible screen: capture tab, downscale, vision-analyze ----
+async function screenScan() {
+  $("toast").textContent = "Capturing screen\u2026";
+  $("scanresult").hidden = true;
+  let dataUrl;
+  try {
+    dataUrl = await chrome.tabs.captureVisibleTab(null, { format: "jpeg", quality: 88 });
+  } catch (e) {
+    $("toast").textContent = "Can't capture this page (browser page?)";
+    return;
+  }
+  // downscale to keep uploads small and cheap
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+  const maxW = 1400;
+  const scale = Math.min(1, maxW / img.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  const b64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+
+  $("toast").textContent = "Analyzing\u2026 a few seconds";
+  let res;
+  try {
+    res = await new Promise((resolve, reject) =>
+      chrome.runtime.sendMessage({
+        type: "flagged-fetch",
+        url: (FlagDB.API || "https://flagged-api.vercel.app") + "/v1/analyze-upload",
+        options: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image_base64: b64, media_type: "image/jpeg" }) },
+      }, (r) => (chrome.runtime.lastError || !r) ? reject(new Error("relay")) : resolve(r)));
+  } catch { $("toast").textContent = "Can't reach the analysis API"; return; }
+  $("toast").textContent = "";
+  let d = {};
+  try { d = JSON.parse(res.body || "{}"); } catch {}
+  if (!res.ok) { $("toast").textContent = d.error || res.error || ("Analysis failed (" + res.status + ")"); return; }
+
+  const cats = {
+    ai_generated: ["confirmed", "AI-generated"],
+    ai_edited: ["confirmed", "AI-edited \u00b7 altered"],
+    likely_real: ["clean", "no artifacts found"],
+    unclear: ["unverified", "inconclusive"],
+  };
+  const [cls, label] = cats[d.category] || cats.unclear;
+  $("scanresult").hidden = false;
+  $("scanresult-body").innerHTML =
+    '<span class="badge ' + cls + '">' + label + (d.likelihood >= 0.5 ? " \u00b7 " + Math.round(d.likelihood * 100) + "%" : "") + "</span>" +
+    (d.signals || []).map((s) => '<div class="srow"><b>' + escapeHtml(s.label || "") + '</b><span class="ev">' + escapeHtml(s.evidence || "") + "</span></div>").join("") +
+    '<div class="counts">LLM analysis \u00b7 model judgment, not proof \u00b7 image not stored</div>';
 }
