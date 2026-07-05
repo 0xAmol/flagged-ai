@@ -23,7 +23,8 @@
     display: flex; justify-content: space-between; align-items: center;
     max-width: 1020px; margin: 0 auto; padding: 22px 24px;
   }
-  .wordmark { font-family: 'Space Grotesk'; font-weight: 700; font-size: 20px; }
+  .wordmark { font-family: 'Space Grotesk'; font-weight: 700; font-size: 20px; display: flex; align-items: center; gap: 9px; }
+  .wordmark img { height: 30px; width: auto; }
   .wordmark span { color: var(--ai); }
   nav a { font-size: 14px; color: var(--muted); text-decoration: none; margin-left: 20px; }
   nav a:hover { color: var(--ink); }
@@ -321,8 +322,9 @@ curl -X POST https://flagged-api.vercel.app/v1/flags \<br>
 
   let offset = 0;
   async function cycle() {
-    const batch = [0,1,2,3].map(i => ITEMS[(offset + i) % ITEMS.length]);
-    offset = (offset + 4) % ITEMS.length;
+    const n = Math.min(4, ITEMS.length);
+    const batch = Array.from({length: n}, (_, i) => ITEMS[(offset + i) % ITEMS.length]);
+    offset = (offset + n) % ITEMS.length;
     const els = build(batch);
     if (reduced) { els.forEach(e => e.classList.add("done")); return; }
     state.textContent = "scanning…";
