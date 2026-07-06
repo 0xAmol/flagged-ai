@@ -1,0 +1,19 @@
+{
+  "name": "Artifake",
+  "short_name": "Artifake",
+  "description": "Check anything for AI. A public record built by people and agents.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F7F5",
+  "theme_color": "#15803D",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "/app.html",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}

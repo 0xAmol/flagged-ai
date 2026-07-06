@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Artifake · check anything</title>
+<meta name="theme-color" content="#15803D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  :root {
+    --ink:#17191C; --paper:#F6F7F5; --card:#fff; --rule:#E3E5E0;
+    --brand:#16A34A; --brand-deep:#15803D; --ai:#DC2626; --ai-deep:#B91C1C;
+    --ai-bg:#FEE2E2; --ok-bg:#E9F7EE; --muted:#7B8087;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--paper); color:var(--ink); font:16px/1.5 'Inter',system-ui,sans-serif;
+         padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  header { display:flex; align-items:center; gap:9px; padding:18px 20px; }
+  header img { height:28px; }
+  .wm { font-family:'Space Grotesk'; font-weight:700; font-size:19px; }
+  .wm span { color:var(--ai); }
+  main { max-width:520px; margin:0 auto; padding:6px 20px 60px; }
+  h1 { font-family:'Space Grotesk'; font-size:26px; line-height:1.15; letter-spacing:-0.01em; }
+  .sub { color:var(--muted); font-size:14px; margin-top:8px; }
+  .panel { background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:16px; margin-top:16px; }
+  label.small { font-family:'IBM Plex Mono'; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:8px; }
+  input[type=url] { width:100%; padding:13px 14px; font-size:15px; border:1.5px solid var(--rule); border-radius:10px; background:var(--paper); font-family:'IBM Plex Mono'; }
+  button.primary { width:100%; margin-top:10px; padding:13px; font:700 15px 'Space Grotesk'; color:#fff;
+    background:var(--brand); border:none; border-radius:10px; cursor:pointer; }
+  button.primary:disabled { opacity:.5; }
+  .or { text-align:center; color:var(--muted); font-size:12px; margin:14px 0 0; }
+  .upload { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; padding:13px;
+    border:1.5px dashed var(--rule); border-radius:10px; color:var(--ink); font-weight:600; font-size:14px;
+    background:var(--card); cursor:pointer; width:100%; }
+  #file { display:none; }
+  .hint { font-size:12px; color:var(--muted); margin-top:8px; text-align:center; }
+
+  .result { margin-top:16px; }
+  .badge { display:inline-block; font:700 11px 'Space Grotesk'; text-transform:uppercase; letter-spacing:.06em;
+    border:1.5px solid; border-radius:5px; padding:4px 9px; }
+  .b-ai { color:var(--ai-deep); border-color:var(--ai-deep); background:var(--ai-bg); }
+  .b-warn { color:#B45309; border-color:#B45309; }
+  .b-ok { color:var(--brand-deep); border-color:var(--brand-deep); background:var(--ok-bg); }
+  .b-gray { color:var(--muted); border-color:var(--muted); }
+  .sig { display:block; background:var(--paper); border:1px solid var(--rule); border-radius:9px; padding:9px 11px; margin-top:8px; }
+  .sig b { font-size:13px; }
+  .sig .ev { display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .grade { margin-top:10px; font-family:'IBM Plex Mono'; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .vrow { display:flex; gap:8px; margin-top:12px; }
+  .vrow button { flex:1; padding:9px; font:600 13px Inter; border-radius:999px; cursor:pointer; background:transparent; }
+  .v-confirm { border:1.5px solid var(--ai); color:var(--ai); }
+  .v-confirm.active { background:var(--ai); color:#fff; }
+  .v-dispute { border:1.5px solid var(--rule); color:#52575C; }
+  .v-dispute.active { background:var(--muted); color:#fff; }
+  .vrow button:disabled { opacity:.45; }
+  .flagbtn { margin-top:12px; width:100%; padding:11px; font:700 14px 'Space Grotesk'; color:#fff; background:var(--ai); border:none; border-radius:10px; cursor:pointer; }
+  .spin { text-align:center; color:var(--muted); padding:18px 0; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:var(--ink); color:#fff;
+    padding:10px 18px; border-radius:999px; font:600 13px 'Space Grotesk'; opacity:0; transition:opacity .25s; pointer-events:none; }
+  .toast.show { opacity:1; }
+  .install-tip { margin-top:22px; font-size:12.5px; color:var(--muted); line-height:1.55; }
+  .install-tip b { color:var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.svg" alt=""><div class="wm">Arti<span>fake</span></div>
+</header>
+<main>
+  <h1>Is it AI? Check anything.</h1>
+  <div class="sub">Paste a link from X, Instagram, TikTok, or anywhere. Or share a screenshot straight to Artifake.</div>
+
+  <div class="panel">
+    <label class="small" for="url">Link to the content</label>
+    <input type="url" id="url" placeholder="https://…" inputmode="url" autocomplete="off">
+    <button class="primary" id="check">Check the record</button>
+    <div class="or">or</div>
+    <label class="upload" for="file">📷 Analyze a screenshot or image</label>
+    <input type="file" id="file" accept="image/*">
+    <div class="hint">Screenshots work even when apps hide the link. Analysis runs on the Artifake server; images are not stored.</div>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="install-tip" id="tip">
+    <b>Add Artifake to your phone:</b> in your browser menu choose <b>Add to Home Screen</b>.
+    On Android, once installed, Artifake appears in the <b>Share</b> menu of TikTok, Instagram, and X:
+    share any post to check it instantly.
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "https://flagged-api.vercel.app";
+const $ = (id) => document.getElementById(id);
+
+// permissionless identity, same scheme as the extension
+function identity() {
+  let k = localStorage.getItem("artifake_key");
+  if (!k) { k = "app_" + crypto.randomUUID().replace(/-/g, "").slice(0, 24); localStorage.setItem("artifake_key", k); }
+  return k;
+}
+const myVotes = JSON.parse(localStorage.getItem("artifake_votes") || "{}");
+function saveVote(id, side) { myVotes[id] = side; localStorage.setItem("artifake_votes", JSON.stringify(myVotes)); }
+
+function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3200); }
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, { ...opts, headers: { "content-type": "application/json", "x-flagged-key": identity(), ...(opts.headers || {}) } });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(data.error || r.statusText), { status: r.status });
+  return data;
+}
+const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ---------- record check ----------
+async function checkUrl(u) {
+  if (!/^https?:\/\/.+\..+/.test(u)) { toast("Paste a full link, starting with https://"); return; }
+  $("result").innerHTML = '<div class="spin">Checking the public record…</div>';
+  let flags = [];
+  try { ({ flags } = await api("/v1/flags?url=" + encodeURIComponent(u))); }
+  catch { $("result").innerHTML = ""; toast("Couldn't reach the record"); return; }
+  if (!flags.length) return renderClean(u);
+  renderFlag(flags[0]);
+}
+
+function renderClean(u) {
+  $("result").innerHTML = `
+    <div class="panel">
+      <span class="badge b-ok">no flags on record</span>
+      <div style="margin-top:10px;font-size:14px">Nobody has flagged this yet. Think it's AI? Put it on the record.</div>
+      <button class="flagbtn" id="flagit">Flag as AI</button>
+      <div class="grade">Flags are public. Submitting counts as your confirm vote.</div>
+    </div>`;
+  $("flagit").onclick = async () => {
+    $("flagit").disabled = true; $("flagit").textContent = "Flagging…";
+    try {
+      const { flag } = await api("/v1/flags", { method: "POST", body: JSON.stringify({ url: u, signals: ["detector"], note: "Flagged from the Artifake mobile app" }) });
+      saveVote(flag.id, "confirm");
+      renderFlag(flag); toast("On the record");
+    } catch (e) { toast(e.message); $("flagit").disabled = false; $("flagit").textContent = "Flag as AI"; }
+  };
+}
+
+function renderFlag(f) {
+  const total = (f.votes.confirm || 0) + (f.votes.dispute || 0);
+  const badge = f.status === "confirmed" ? '<span class="badge b-ai">AI · confirmed</span>'
+    : f.status === "disputed" ? '<span class="badge b-ok">overruled by the crowd</span>'
+    : f.status === "contested" ? '<span class="badge b-warn">contested</span>'
+    : '<span class="badge b-gray">AI · unverified</span>';
+  const my = myVotes[f.id];
+  $("result").innerHTML = `
+    <div class="panel">
+      ${badge}
+      ${f.note ? `<div style="margin-top:10px;font-size:14px">${esc(f.note)}</div>` : ""}
+      <div class="grade">${f.votes.confirm || 0} confirm · ${f.votes.dispute || 0} dispute${total < 3 ? ` · needs ${3 - total} more` : ""}</div>
+      <div class="vrow">
+        <button class="v-confirm ${my === "confirm" ? "active" : ""}" id="vc" ${my ? "disabled" : ""}>${my === "confirm" ? "✓ Confirmed" : "Confirm AI"}</button>
+        <button class="v-dispute ${my === "dispute" ? "active" : ""}" id="vd" ${my ? "disabled" : ""}>${my === "dispute" ? "✓ Disputed" : "Dispute"}</button>
+      </div>
+    </div>`;
+  if (!my) {
+    const cast = async (side) => {
+      try { const { flag } = await api(`/v1/flags/${f.id}/votes`, { method: "POST", body: JSON.stringify({ side }) }); saveVote(f.id, side); renderFlag(flag); }
+      catch (e) {
+        if (e.status === 409) { saveVote(f.id, "confirm"); toast("Already counted: your flag includes a confirm vote"); renderFlag(f); }
+        else toast(e.message);
+      }
+    };
+    $("vc").onclick = () => cast("confirm");
+    $("vd").onclick = () => cast("dispute");
+  }
+}
+
+// ---------- screenshot analysis ----------
+$("file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 4_400_000) { toast("Image too large (4.5MB max)"); return; }
+  $("result").innerHTML = '<div class="spin">Analyzing image… this takes a few seconds</div>';
+  const b64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]); r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  try {
+    const d = await api("/v1/analyze-upload", { method: "POST", body: JSON.stringify({ image_base64: b64, media_type: file.type }) });
+    const cats = { ai_generated: ["b-ai", "AI-generated"], ai_edited: ["b-ai", "AI-edited · real photo, altered"], likely_real: ["b-ok", "no artifacts found"], unclear: ["b-gray", "inconclusive"] };
+    const [cls, label] = cats[d.category] || cats.unclear;
+    $("result").innerHTML = `
+      <div class="panel">
+        <span class="badge ${cls}">${label}${d.likelihood >= 0.5 ? " · " + Math.round(d.likelihood * 100) + "%" : ""}</span>
+        ${(d.signals || []).map((s) => `<span class="sig"><b>${esc(s.label)}</b><span class="ev">${esc(s.evidence)}</span></span>`).join("")}
+        <div class="grade">LLM analysis · model judgment, not proof</div>
+      </div>`;
+  } catch (err) {
+    $("result").innerHTML = "";
+    toast(err.status === 501 ? "Analysis not enabled on the server" : err.message);
+  }
+  e.target.value = "";
+});
+
+$("check").onclick = () => checkUrl($("url").value.trim());
+$("url").addEventListener("keydown", (e) => { if (e.key === "Enter") checkUrl($("url").value.trim()); });
+
+// ---------- share target: TikTok/Instagram/X share straight into here ----------
+const q = new URLSearchParams(location.search);
+const shared = q.get("url") || (q.get("text") || "").match(/https?:\/\/\S+/)?.[0];
+if (shared) { $("url").value = shared; checkUrl(shared); }
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
