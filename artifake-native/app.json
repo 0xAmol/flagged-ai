@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Artifake",
+    "slug": "artifake",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon-1024.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F6F7F5",
+      "image": "./assets/icon-512.png",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "bundleIdentifier": "ai.artifake.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "ai.artifake.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-512.png",
+        "backgroundColor": "#17191C"
+      }
+    },
+    "plugins": [
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsImageWithMaxCount": 1
+          },
+          "androidIntentFilters": [
+            "text/*",
+            "image/*"
+          ]
+        }
+      ]
+    ],
+    "scheme": "artifake",
+    "extra": {
+      "eas": {
+        "projectId": "fb885a30-af95-4fb9-b5e2-3a7229b3c8fa"
+      }
+    }
+  }
+}
