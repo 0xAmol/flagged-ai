@@ -273,10 +273,16 @@ app.post("/v1/analyze-image", async (c) => {
     b64 = buf.toString("base64");
   } catch { return err(c, 502, "could not fetch that image"); }
 
-  const prompt = `You are examining an image for signs of AI generation or AI manipulation. Look for: lighting and shadow direction consistency across the scene; blending or halo artifacts around objects (signs of insertion or replacement); rendering of any text, logos, or flags; anatomy and hands; texture repetition or over-smoothness; physically implausible details; compression inconsistencies between regions.
+  const prompt = `You are examining an image (often a screenshot of a social media post) for signs of AI generation or AI manipulation in the pictured content. Ignore app UI chrome; judge the media itself.
+
+Look for: rendering of text, logos, and lettering (keyboards, screens, signs); reflection and shadow physics; anatomy and hands; texture repetition or tiling; over-smoothness; physically implausible details; platform AI-disclosure labels visible in the screenshot.
+
+Distinguish EDITED from GENERATED: visible VFX overlays, tracking markers, filters, or composited graphics on otherwise-photographic footage are editing, not generation — do not treat decoration as evidence the underlying content is AI.
+
 Respond with ONLY a JSON object, no markdown:
-{"likelihood": <0..1 that this image is AI-generated or AI-edited>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>"}]}
-Rules: at most 5 signals, each tied to something actually visible. If regions differ (a real photo with one edited element), say which element and use category ai_edited. If you see no artifacts, likelihood below 0.5, empty signals, category likely_real or unclear. Never invent details.`;
+{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]}
+
+Rules: at most 5 signals, each tied to something actually visible. anchor is the normalized position of the cited detail (x from left, y from top); box is its approximate extent. If you cannot locate a signal spatially, omit anchor and box for that signal rather than guessing. If evidence is thin or conflicting, use category "unclear" with confidence "weak" and say so plainly. Never invent details.`;
 
   let out;
   try {
@@ -289,7 +295,7 @@ Rules: at most 5 signals, each tied to something actually visible. If regions di
       },
       body: JSON.stringify({
         model: process.env.ANALYZE_MODEL || "claude-haiku-4-5",
-        max_tokens: 600,
+        max_tokens: 1500,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
           { type: "text", text: prompt },
@@ -307,6 +313,7 @@ Rules: at most 5 signals, each tied to something actually visible. If regions di
     category: ["ai_generated","ai_edited","likely_real","unclear"].includes(out.category) ? out.category : "unclear",
     signals: Array.isArray(out.signals) ? out.signals.slice(0, 5) : [],
     note: "model judgment, not proof",
+    confidence: ["strong","moderate","weak"].includes(out.confidence) ? out.confidence : "moderate",
   });
 });
 
@@ -330,10 +337,16 @@ app.post("/v1/analyze-upload", async (c) => {
   if (!/^image\/(jpeg|png|webp|gif)$/.test(mediaType)) return err(c, 415, "unsupported image type");
   if (b64.length < 100 || b64.length > 6_200_000) return err(c, 413, "image must be under ~4.5MB");
 
-  const prompt = `You are examining an image (often a screenshot of a social media post) for signs of AI generation or AI manipulation in the pictured content. Ignore the app UI chrome; judge the media itself. Look for: lighting and shadow consistency; blending or halo artifacts around objects; rendering of text, logos, or flags; anatomy and hands; texture repetition or over-smoothness; physically implausible details; platform AI-disclosure labels visible in the screenshot (report those as signals too).
+  const prompt = `You are examining an image (often a screenshot of a social media post) for signs of AI generation or AI manipulation in the pictured content. Ignore app UI chrome; judge the media itself.
+
+Look for: rendering of text, logos, and lettering (keyboards, screens, signs); reflection and shadow physics; anatomy and hands; texture repetition or tiling; over-smoothness; physically implausible details; platform AI-disclosure labels visible in the screenshot.
+
+Distinguish EDITED from GENERATED: visible VFX overlays, tracking markers, filters, or composited graphics on otherwise-photographic footage are editing, not generation — do not treat decoration as evidence the underlying content is AI.
+
 Respond with ONLY a JSON object, no markdown:
-{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>"}]}
-Rules: at most 5 signals, each tied to something actually visible. Never invent details.`;
+{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]}
+
+Rules: at most 5 signals, each tied to something actually visible. anchor is the normalized position of the cited detail (x from left, y from top); box is its approximate extent. If you cannot locate a signal spatially, omit anchor and box for that signal rather than guessing. If evidence is thin or conflicting, use category "unclear" with confidence "weak" and say so plainly. Never invent details.`;
 
   let out;
   try {
@@ -346,7 +359,7 @@ Rules: at most 5 signals, each tied to something actually visible. Never invent 
       },
       body: JSON.stringify({
         model: process.env.ANALYZE_MODEL || "claude-haiku-4-5",
-        max_tokens: 600,
+        max_tokens: 1500,
         messages: [{ role: "user", content: [
           { type: "image", source: { type: "base64", media_type: mediaType, data: b64 } },
           { type: "text", text: prompt },
@@ -364,6 +377,7 @@ Rules: at most 5 signals, each tied to something actually visible. Never invent 
     category: ["ai_generated","ai_edited","likely_real","unclear"].includes(out.category) ? out.category : "unclear",
     signals: Array.isArray(out.signals) ? out.signals.slice(0, 5) : [],
     note: "model judgment, not proof",
+    confidence: ["strong","moderate","weak"].includes(out.confidence) ? out.confidence : "moderate",
   });
 });
 
