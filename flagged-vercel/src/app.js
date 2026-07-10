@@ -280,7 +280,7 @@ Look for: rendering of text, logos, and lettering (keyboards, screens, signs); r
 Distinguish EDITED from GENERATED: visible VFX overlays, tracking markers, filters, or composited graphics on otherwise-photographic footage are editing, not generation — do not treat decoration as evidence the underlying content is AI.
 
 Respond with ONLY a JSON object, no markdown:
-{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]}
+{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": [{"id": "anatomy" | "metadata" | "detector" | "facts" | "phrasing", "label": "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]
 
 Rules: at most 5 signals, each tied to something actually visible. anchor is the normalized position of the cited detail (x from left, y from top); box is its approximate extent. If you cannot locate a signal spatially, omit anchor and box for that signal rather than guessing. If evidence is thin or conflicting, use category "unclear" with confidence "weak" and say so plainly. Never invent details.`;
 
@@ -344,9 +344,9 @@ Look for: rendering of text, logos, and lettering (keyboards, screens, signs); r
 Distinguish EDITED from GENERATED: visible VFX overlays, tracking markers, filters, or composited graphics on otherwise-photographic footage are editing, not generation — do not treat decoration as evidence the underlying content is AI.
 
 Respond with ONLY a JSON object, no markdown:
-{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": [{"id": "anatomy", "label": "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]}
+{"likelihood": <0..1>, "category": "ai_generated" | "ai_edited" | "likely_real" | "unclear", "confidence": "strong" | "moderate" | "weak", "signals": ["id": "<one of: anatomy | metadata | detector | facts | phrasing>", "<short name>", "evidence": "<the specific visible detail>", "anchor": {"x": <0..1>, "y": <0..1>}, "box": {"w": <0..1>, "h": <0..1>}}]}
 
-Rules: at most 5 signals, each tied to something actually visible. anchor is the normalized position of the cited detail (x from left, y from top); box is its approximate extent. If you cannot locate a signal spatially, omit anchor and box for that signal rather than guessing. If evidence is thin or conflicting, use category "unclear" with confidence "weak" and say so plainly. Never invent details.`;
+Rules: at most 5 signals, each tied to something actually visible. anchor is the normalized position of the cited detail (x from left, y from top); box is its approximate extent. If you cannot locate a signal spatially, omit anchor and box for that signal rather than guessing. If evidence is thin or conflicting, use category "unclear" with confidence "weak" and say so plainly. id must be exactly one of the listed values; put specifics in the label, not the id. Use exactly the keys shown: id, label, evidence, anchor, box — never rename them.`;
 
   let out;
   try {
