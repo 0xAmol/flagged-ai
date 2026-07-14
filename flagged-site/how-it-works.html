@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Artifake works</title>
+<meta name="description" content="Scan images, video frames, and text for AI signatures. Every verdict shows its evidence.">
+<style>
+  :root{
+    --ink:#17191C; --paper:#F6F7F5; --card:#FFFFFF;
+    --green:#3E9B4F; --green-dark:#2F7A3D; --green-soft:#E4F2E6;
+    --red:#DC2626; --red-dark:#B91C1C; --red-soft:#FEE2E2;
+    --mute:#6B7069; --line:#E3E5E0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--paper);color:var(--ink);font-family:-apple-system,'Inter',system-ui,sans-serif;line-height:1.55}
+  .wrap{max-width:860px;margin:0 auto;padding:40px 20px 80px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .mark{width:38px;height:38px;border-radius:10px;background:var(--green);position:relative;flex:none}
+  .mark::before{content:"";position:absolute;left:17px;top:7px;width:3px;height:24px;background:#fff;border-radius:2px}
+  .mark::after{content:"";position:absolute;left:20px;top:7px;border-left:10px solid var(--red);border-top:6px solid transparent;border-bottom:6px solid transparent}
+  header b{font-size:22px;letter-spacing:-.02em}
+  header b span{color:var(--red)}
+  h1{font-size:clamp(28px,5vw,40px);letter-spacing:-.03em;line-height:1.1;margin:18px 0 10px}
+  .lede{color:var(--mute);font-size:17px;max-width:560px;margin-bottom:34px}
+
+  .gestures{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:56px}
+  .g{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .g .kbd{display:inline-block;font:600 12px/1 system-ui;background:var(--paper);border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:5px 9px;margin-bottom:10px}
+  .g h3{font-size:15px;margin-bottom:4px}
+  .g p{font-size:13.5px;color:var(--mute)}
+
+  section{margin-bottom:64px}
+  .step{display:inline-flex;align-items:center;gap:8px;font:700 12px/1 system-ui;letter-spacing:.08em;color:var(--green-dark);text-transform:uppercase;margin-bottom:10px}
+  .step i{width:22px;height:22px;border-radius:7px;background:var(--green-soft);color:var(--green-dark);font-style:normal;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  h2{font-size:26px;letter-spacing:-.02em;margin-bottom:8px}
+  .how{color:var(--mute);font-size:15.5px;max-width:600px;margin-bottom:22px}
+  .how b{color:var(--ink)}
+
+  .demo{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;gap:18px}
+  @media(min-width:700px){.demo.two{grid-template-columns:1.15fr 1fr;align-items:start}}
+
+  /* fake image with markers */
+  .canvas{position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#8ad7f2 0%,#7f77dd 55%,#b06ad3 100%);aspect-ratio:4/3}
+  .canvas .sun{position:absolute;right:14%;top:12%;width:52px;height:52px;border-radius:50%;background:#FAEEDA}
+  .canvas .fig{position:absolute;left:34%;bottom:0;width:32%;height:62%;background:#F6F7F5;border-radius:40% 40% 6px 6px}
+  .canvas .visor{position:absolute;left:41%;top:16%;width:18%;aspect-ratio:1;border-radius:50%;background:#2b2140;border:6px solid #efeee9}
+  .canvas .hand{position:absolute;left:26%;bottom:24%;width:12%;height:9%;background:#F6F7F5;border-radius:8px;transform:rotate(-18deg)}
+  .dot{position:absolute;width:9px;height:9px;border-radius:50%;background:#fff;border:2.5px solid var(--red);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .chip{position:absolute;width:22px;height:22px;border-radius:6px;background:var(--red);color:#fff;font:800 12px/22px system-ui;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .chip::after{content:"";position:absolute;left:-8px;top:20px;width:13px;height:2px;background:rgba(255,255,255,.9);transform:rotate(38deg);transform-origin:right center}
+
+  .verdict{border:1px solid var(--line);border-radius:14px;padding:16px}
+  .verdict h4{font-size:13px;color:var(--red-dark);margin-bottom:10px}
+  .verdict.ok h4{color:var(--green-dark)}
+  .sig{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px}
+  .sig .n{flex:none;width:20px;height:20px;border-radius:6px;background:var(--red);color:#fff;font:800 11px/20px system-ui;text-align:center}
+  .sig.ok .n{background:var(--green)}
+  .sig p{font-size:12.5px;color:var(--mute)}
+  .sig p b{color:var(--ink);font-size:13px;display:block}
+  .grade{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font:600 10.5px/1.4 system-ui;letter-spacing:.06em;color:var(--mute);text-transform:uppercase}
+
+  /* video demo */
+  .player{position:relative;border-radius:12px;overflow:hidden;background:#101214;aspect-ratio:16/9}
+  .player .frame{position:absolute;inset:0;background:linear-gradient(180deg,#2d4a5e 0%,#1c2a38 70%,#141c24 100%)}
+  .player .glow{position:absolute;left:8%;top:10%;width:34%;height:60%;border-radius:50%;background:rgba(138,215,242,.14)}
+  .player .head{position:absolute;left:56%;top:18%;width:15%;aspect-ratio:1;border-radius:50%;background:#c9a184}
+  .player .body{position:absolute;left:49%;top:36%;width:29%;height:44%;background:#31404f;border-radius:44% 44% 0 0}
+  .player .collar{position:absolute;left:60.5%;top:37%;width:6%;height:9%;background:#e8e5de;transform:rotate(3deg)}
+  .player .third{position:absolute;left:5%;right:5%;bottom:14%;background:rgba(16,18,20,.82);border-left:4px solid var(--red);border-radius:4px;padding:7px 10px}
+  .player .third b{display:block;font:700 11px/1.3 system-ui;color:#fff;letter-spacing:.02em}
+  .player .third span{font:500 9.5px/1.4 system-ui;color:#9fb2c2}
+  .player .bug{position:absolute;right:4%;top:6%;font:800 9px/1 system-ui;color:#fff;background:var(--red);border-radius:3px;padding:4px 6px;letter-spacing:.08em}
+  .player .pausebtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+  .player .pausebtn span{width:6px;height:22px;background:#fff;border-radius:2px;margin:0 3.5px}
+  .player .bar{position:absolute;left:12px;right:12px;bottom:12px;height:4px;border-radius:99px;background:rgba(255,255,255,.25)}
+  .player .bar i{display:block;width:42%;height:100%;border-radius:99px;background:var(--red)}
+  .steps{counter-reset:s;display:grid;gap:10px}
+  .steps div{display:flex;gap:12px;align-items:flex-start;background:var(--paper);border-radius:10px;padding:12px 14px}
+  .steps div::before{counter-increment:s;content:counter(s);flex:none;width:24px;height:24px;border-radius:8px;background:var(--ink);color:#fff;font:800 12px/24px system-ui;text-align:center}
+  .steps p{font-size:13.5px;color:var(--mute)}
+  .steps p b{color:var(--ink)}
+
+  /* text demo */
+  .page{border:1px solid var(--line);border-radius:12px;padding:18px;font-size:14px;color:#3a3d3a;background:var(--paper)}
+  .page p{margin-bottom:10px}
+  .hl{background:var(--red-soft);border-bottom:2px solid var(--red);border-radius:3px;padding:0 3px}
+  .pill{display:inline-block;background:var(--red-soft);color:var(--red-dark);font:600 12px/1.4 system-ui;border-radius:5px;padding:3px 8px;margin:0 5px 6px 0}
+
+  .honest{background:var(--card);border:1.5px solid var(--green);border-radius:16px;padding:22px;margin-bottom:56px}
+  .honest h3{font-size:18px;margin-bottom:6px}
+  .honest p{color:var(--mute);font-size:15px;max-width:640px}
+  .honest .badge{display:inline-block;border:1.5px solid var(--mute);color:var(--mute);border-radius:8px;font:700 12px/1 system-ui;letter-spacing:.06em;padding:8px 12px;margin-top:12px;text-transform:uppercase}
+
+  footer{border-top:1px solid var(--line);padding-top:22px;display:flex;flex-wrap:wrap;gap:18px;font-size:14px;color:var(--mute)}
+  footer a{color:var(--green-dark);text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header><div class="mark"></div><b>Arti<span>fake</span></b></header>
+<h1>How Artifake works</h1>
+<p class="lede">Three ways to check anything you see. Every verdict shows its evidence, and clean scans never pretend to be proof.</p>
+
+<div class="gestures">
+  <div class="g"><span class="kbd">Hover</span><h3>Hover any image</h3><p>A Scan badge appears on large images on any site. One click to analyze.</p></div>
+  <div class="g"><span class="kbd">Right click</span><h3>Right-click an image</h3><p>Pick "Deep scan image with Artifake" from the menu. Same result, works everywhere.</p></div>
+  <div class="g"><span class="kbd">Toolbar</span><h3>Open the popup</h3><p>Scan the page's images, its text, or a paused video frame with one button each.</p></div>
+</div>
+
+<section>
+  <div class="step"><i>1</i> Images</div>
+  <h2>Scan an image, see the evidence pinned on it</h2>
+  <p class="how">Hover an image and click <b>Scan</b>. If AI artifacts are found, numbered markers land on the exact spots: the warped logo, the impossible reflection, the texture that repeats. Click a marker to read what it means. Not a score, a case.</p>
+  <div class="demo two">
+    <div class="canvas">
+      <div class="sun"></div><div class="fig"></div><div class="visor"></div><div class="hand"></div>
+      <span class="dot" style="left:48%;top:24%"></span><span class="chip" style="left:52%;top:14%">1</span>
+      <span class="dot" style="left:30%;bottom:29%"></span><span class="chip" style="left:34%;bottom:36%;top:auto">2</span>
+      <span class="dot" style="left:46%;bottom:14%"></span><span class="chip" style="left:50%;bottom:21%;top:auto">3</span>
+    </div>
+    <div class="verdict">
+      <h4>Image analysis: AI-generated · 92%</h4>
+      <div class="sig"><span class="n">1</span><p><b>Visor reflection implausible</b>The gradient is too clean and does not match any light source in the scene</p></div>
+      <div class="sig"><span class="n">2</span><p><b>Hand anatomy</b>Fingers merge where they should separate, a common generation artifact</p></div>
+      <div class="sig"><span class="n">3</span><p><b>Texture repetition</b>The same fabric pattern tiles across the suit instead of varying naturally</p></div>
+      <div class="grade">LLM analysis · model judgment, not proof</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="step"><i>2</i> Video</div>
+  <h2>Check a video: pause, then scan the frame</h2>
+  <p class="how">Video is just frames. Pause on the moment that looks off, open the Artifake popup, and hit <b>Check a video</b>. We analyze exactly what is on your screen, artifact by artifact.</p>
+  <div class="demo two">
+    <div class="player">
+      <div class="frame"></div>
+      <div class="glow"></div>
+      <div class="body"></div>
+      <div class="collar"></div>
+      <div class="head"></div>
+      <span class="bug">LIVE</span>
+      <div class="third"><b>Breaking: markets react to overnight announcement</b><span>Updated 2 min ago · unverified clip circulating</span></div>
+      <span class="dot" style="left:61%;top:26%"></span><span class="chip" style="left:65%;top:16%">1</span>
+      <div class="pausebtn"><span></span><span></span></div>
+      <div class="bar"><i></i></div>
+    </div>
+    <div class="steps">
+      <div><p><b>Pause the video</b> on the frame you want to check</p></div>
+      <div><p>Open the popup and tap <b>Check a video</b></p></div>
+      <div><p>Get a verdict on the frame with markers on the evidence, like the lip-sync mismatch pinned at <b>1</b></p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="step"><i>3</i> Text</div>
+  <h2>Scan a page's text, with quoted evidence</h2>
+  <p class="how">One tap on <b>Scan this page's text</b> runs an LLM analysis of the article, post, or newsletter you are reading. If AI writing patterns show up, you get the exact quotes, not a mystery percentage.</p>
+  <div class="demo two">
+    <div class="page">
+      <p>In today's <span class="hl">fast-paced digital landscape</span>, staying ahead means more than keeping up.</p>
+      <p>It's <span class="hl">important to note</span> that these tools do not just save time. They <span class="hl">unlock seamless</span> workflows and elevate every part of your process.</p>
+      <p>Moreover, the results speak for themselves.</p>
+    </div>
+    <div class="verdict">
+      <h4>LLM analysis: 84% AI-likely</h4>
+      <span class="pill">"in today's fast-paced..."</span>
+      <span class="pill">"it's important to note"</span>
+      <span class="pill">buzzword cluster</span>
+      <div class="grade">LLM analysis · model judgment, not proof</div>
+    </div>
+  </div>
+</section>
+
+<div class="honest">
+  <h3>When nothing is found, we say exactly that</h3>
+  <p>A clean scan means we found no artifacts. It is not a certificate of authenticity, and Artifake will never give one. Good AI content can pass a scan, which is why every check also consults the community record: content flagged and confirmed by crowd votes that no single scan could settle.</p>
+  <span class="badge">No artifacts detected · not proof it's real</span>
+</div>
+
+<footer>
+  <a href="/">Artifake home</a>
+  <a href="/app.html">Mobile app</a>
+  <a href="/privacy.html">Privacy</a>
+  <span>The internet stopped telling us what's real. Artifake is the record that answers.</span>
+</footer>
+
+</div>
+</body>
+</html>
