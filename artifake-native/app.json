@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon-1024.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#F6F7F5",
-      "image": "./assets/icon-512.png",
-      "resizeMode": "contain"
-    },
     "ios": {
       "bundleIdentifier": "ai.artifake.app",
       "supportsTablet": false,
@@ -27,6 +22,14 @@
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon-512.png",
+          "backgroundColor": "#F6F7F5",
+          "resizeMode": "contain"
+        }
+      ],
+      [
         "expo-share-intent",
         {
           "iosActivationRules": {
@@ -39,7 +42,8 @@
             "image/*"
           ]
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "scheme": "artifake",
     "extra": {
