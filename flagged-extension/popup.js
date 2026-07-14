@@ -1,4 +1,7 @@
-// popup.js — flagged.ai v0.3, VPN-style controller
+// popup.js — Artifake v0.7 controller
+// Built on the shipped v0.3: adds "Scan images on this page", per-button busy
+// states, manual scans that work regardless of the passive toggle, footer
+// version from the manifest, and honest completion toasts.
 let tabUrl = null, tabId = null;
 const $ = (id) => document.getElementById(id);
 
@@ -8,19 +11,32 @@ async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabUrl = tab && tab.url ? tab.url : null;
   tabId = tab ? tab.id : null;
-  if (tabUrl && /^https?:/.test(tabUrl)) {
+  const isWeb = !!(tabUrl && /^https?:/.test(tabUrl));
+  if (isWeb) {
     try { $("host").textContent = new URL(tabUrl).hostname.replace(/^www\./, ""); } catch {}
   }
+
+  $("ver").textContent = "v" + chrome.runtime.getManifest().version;
 
   const st = await chrome.storage.local.get(["flagged_on", "flagged_stats"]);
   renderPower(st.flagged_on === true);
   renderStats(st.flagged_stats || { pages: 0, sigs: 0 });
 
-  $("power").onclick = toggle;
-  $("deepscan").onclick = deepScan;
-  $("screenscan").onclick = screenScan;
+  // manual scans are explicit user intent: enabled whenever we're on a real page
+  $("imagescan").disabled = !isWeb;
+  $("deepscan").disabled = !isWeb;
+  $("screenscan").disabled = !isWeb;
 
-  // stats update live while popup is open
+  $("power").onclick = toggle;
+  $("cta").onclick = toggle;
+  $("status").onclick = async () => {
+    const st2 = await chrome.storage.local.get("flagged_on");
+    if (st2.flagged_on !== true) toggle();
+  };
+  $("imagescan").onclick = () => run("imagescan", imageScan);
+  $("deepscan").onclick = () => run("deepscan", deepScan);
+  $("screenscan").onclick = () => run("screenscan", screenScan);
+
   chrome.storage.onChanged.addListener((chg) => {
     if (chg.flagged_stats) renderStats(chg.flagged_stats.newValue || { pages: 0, sigs: 0 });
   });
@@ -28,20 +44,28 @@ async function init() {
   renderLedger();
 }
 
+// one-at-a-time busy wrapper: pulses the button, restores when done
+let busy = false;
+async function run(id, fn) {
+  if (busy) return;
+  busy = true;
+  const b = $(id);
+  b.classList.add("busy");
+  try { await fn(); } finally { b.classList.remove("busy"); busy = false; }
+}
+
 function renderPower(on) {
   $("power").classList.toggle("on", on);
+  $("power").classList.toggle("attn", !on);
   $("pwrap").classList.toggle("on", on);
-  $("zone").classList.toggle("on", on);
+  $("cta").hidden = on;
+  $("host").style.display = on ? "" : "none";
   const s = $("status");
   s.classList.toggle("on", on);
-  s.innerHTML = on
-    ? 'Scanning on<span class="sub">AI signatures will be marked on pages as you browse</span>'
-    : 'Not scanning<span class="sub">Turn on to mark AI signatures on the pages you visit</span>';
-  $("deepscan").disabled = !on;
-  $("screenscan").disabled = !on;
-  $("deephint").textContent = on
-    ? "LLM signature analysis of this page's text"
-    : "LLM signature analysis · turn scanning on first";
+  s.childNodes[1].textContent = on ? "Scanning on " : "Not scanning ";
+  $("statussub").textContent = on
+    ? "· marking AI signatures as you browse"
+    : "· tap the power button to start";
 }
 
 async function toggle() {
@@ -49,7 +73,6 @@ async function toggle() {
   const on = !(st.flagged_on === true);
   await chrome.storage.local.set({ flagged_on: on });
   renderPower(on);
-  // nudge every open tab so bubbles appear/disappear immediately
   const tabs = await chrome.tabs.query({});
   for (const t of tabs) {
     if (t.id && t.url && /^https?:/.test(t.url)) {
@@ -63,25 +86,46 @@ function renderStats(s) {
   $("st-sigs").textContent = s.sigs || 0;
 }
 
+function toast(msg, ms = 5000) {
+  $("toast").textContent = msg;
+  if (ms) setTimeout(() => { if ($("toast").textContent === msg) $("toast").textContent = ""; }, ms);
+}
+
+async function imageScan() {
+  if (!tabId) return;
+  toast("Scanning images on the page…", 0);
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: "flagged-scan-images", limit: 3 });
+    if (res && res.ok) {
+      toast(res.scanned
+        ? "Scanned " + res.scanned + " image" + (res.scanned === 1 ? "" : "s") + " — results are marked on the page"
+        : "No large images in view — scroll to the image and try again");
+    } else {
+      toast((res && res.error) || "Image scan unavailable");
+    }
+  } catch {
+    toast("Reload the page once, then try again");
+  }
+}
+
 async function deepScan() {
   if (!tabId) return;
-  $("toast").textContent = "Analyzing page text…";
+  toast("Analyzing page text…", 0);
   try {
     const res = await chrome.tabs.sendMessage(tabId, { type: "flagged-deepscan" });
     if (res && res.ok) {
-      $("toast").textContent = res.found
-        ? `Analysis done: ${res.found} signature${res.found === 1 ? "" : "s"} marked on the page`
-        : "Analysis done: no strong AI signatures in this page's text";
+      toast(res.found
+        ? "Analysis done: " + res.found + " signature" + (res.found === 1 ? "" : "s") + " marked on the page"
+        : "Analysis done: no strong AI signatures in this page's text");
     } else {
-      $("toast").textContent = (res && res.error) || "Deep scan unavailable";
+      toast((res && res.error) || "Text scan unavailable");
     }
   } catch {
-    $("toast").textContent = "Reload the page once, then try again";
+    toast("Reload the page once, then try again");
   }
-  setTimeout(() => ($("toast").textContent = ""), 5000);
 }
 
-// ---- community record (secondary) ----
+// ---- community record ----
 async function renderLedger() {
   if (!tabUrl || !/^https?:/.test(tabUrl)) return;
   let flags = [];
@@ -108,8 +152,7 @@ async function renderLedger() {
     const cast = async (side) => {
       const r = await FlagDB.voteFlag(f.id, side);
       if (r && r.ok === false && r.reason === "already-voted") {
-        $("toast").textContent = "Already counted: submitting a flag includes your confirm vote";
-        setTimeout(() => ($("toast").textContent = ""), 4500);
+        toast("Already counted: submitting a flag includes your confirm vote", 4500);
       }
       renderLedger();
     };
@@ -122,19 +165,17 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-
-// ---- scan visible screen: capture tab, downscale, vision-analyze ----
+// ---- check a video: capture tab, downscale, vision-analyze ----
 async function screenScan() {
-  $("toast").textContent = "Capturing screen\u2026";
+  toast("Capturing screen…", 0);
   $("scanresult").hidden = true;
   let dataUrl;
   try {
     dataUrl = await chrome.tabs.captureVisibleTab(null, { format: "jpeg", quality: 88 });
   } catch (e) {
-    $("toast").textContent = "Can't capture this page (browser page?)";
+    toast("Can't capture this page (browser page?)");
     return;
   }
-  // downscale to keep uploads small and cheap
   const img = new Image();
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
   const maxW = 1400;
@@ -145,7 +186,7 @@ async function screenScan() {
   canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
   const b64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
 
-  $("toast").textContent = "Analyzing\u2026 a few seconds";
+  toast("Analyzing… a few seconds", 0);
   let res;
   try {
     res = await new Promise((resolve, reject) =>
@@ -154,22 +195,22 @@ async function screenScan() {
         url: (FlagDB.API || "https://flagged-api.vercel.app") + "/v1/analyze-upload",
         options: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image_base64: b64, media_type: "image/jpeg" }) },
       }, (r) => (chrome.runtime.lastError || !r) ? reject(new Error("relay")) : resolve(r)));
-  } catch { $("toast").textContent = "Can't reach the analysis API"; return; }
-  $("toast").textContent = "";
+  } catch { toast("Can't reach the analysis API"); return; }
+  toast("");
   let d = {};
   try { d = JSON.parse(res.body || "{}"); } catch {}
-  if (!res.ok) { $("toast").textContent = d.error || res.error || ("Analysis failed (" + res.status + ")"); return; }
+  if (!res.ok) { toast(d.error || res.error || ("Analysis failed (" + res.status + ")")); return; }
 
   const cats = {
     ai_generated: ["confirmed", "AI-generated"],
-    ai_edited: ["confirmed", "AI-edited \u00b7 altered"],
+    ai_edited: ["confirmed", "AI-edited · altered"],
     likely_real: ["clean", "no artifacts found"],
-    unclear: ["unverified", "inconclusive"],
+    unclear: ["unverified", "couldn't determine"],
   };
   const [cls, label] = cats[d.category] || cats.unclear;
   $("scanresult").hidden = false;
   $("scanresult-body").innerHTML =
-    '<span class="badge ' + cls + '">' + label + (d.likelihood >= 0.5 ? " \u00b7 " + Math.round(d.likelihood * 100) + "%" : "") + "</span>" +
+    '<span class="badge ' + cls + '">' + label + (d.likelihood >= 0.5 ? " · " + Math.round(d.likelihood * 100) + "%" : "") + "</span>" +
     (d.signals || []).map((s) => '<div class="srow"><b>' + escapeHtml(s.label || "") + '</b><span class="ev">' + escapeHtml(s.evidence || "") + "</span></div>").join("") +
-    '<div class="counts">LLM analysis \u00b7 model judgment, not proof \u00b7 image not stored</div>';
+    '<div class="counts">LLM analysis · model judgment, not proof · image not stored' + (d.confidence ? " · " + escapeHtml(d.confidence) + " confidence" : "") + "</div>";
 }

@@ -664,13 +664,33 @@
       });
     }
   }
-
+  async function scanImagesOnPage(limit) {
+    ensureOverlay();
+    const seen = new Set(); const targets = [];
+    for (const img of document.querySelectorAll("img")) {
+      const src = img.currentSrc || img.src || "";
+      if (!src.startsWith("http") || seen.has(src)) continue;
+      const r = img.getBoundingClientRect();
+      if (r.width < 180 || r.height < 120) continue;
+      if (r.bottom < 0 || r.top > innerHeight) continue;
+      seen.add(src); targets.push(src);
+      if (targets.length >= limit) break;
+    }
+    if (!targets.length) { return { ok: true, scanned: 0 }; }
+    toast("Scanning " + targets.length + " image" + (targets.length === 1 ? "" : "s") + "…");
+    for (const src of targets) await analyzeImage(src);
+    return { ok: true, scanned: targets.length };
+  }
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!msg) return;
     if (msg.type === "flagged-scan") { scan(); }
     if (msg.type === "flagged-analyze-image") { ensureOverlay(); analyzeImage(msg.srcUrl); }
     if (msg.type === "flagged-clear") { clearAll(); }
     if (msg.type === "flagged-refresh") { state().then((on) => on && scan()); }
+    if (msg.type === "flagged-scan-images") {
+      scanImagesOnPage(msg.limit || 3).then(sendResponse);
+      return true; // async response
+    }
     if (msg.type === "flagged-deepscan") {
       deepScan().then(sendResponse);
       return true; // async response
