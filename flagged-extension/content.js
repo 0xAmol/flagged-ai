@@ -681,10 +681,62 @@
     for (const src of targets) await analyzeImage(src);
     return { ok: true, scanned: targets.length };
   }
+  // v0.8: the video verdict lands ON the video — bubble + markers attach to
+  // the largest visible <video>, riding the same tracking loop as images.
+  function showVideoVerdict(data, framesSent) {
+    ensureOverlay();
+    const vids = [...document.querySelectorAll("video")].filter((v) => {
+      const r = v.getBoundingClientRect();
+      return r.width >= 200 && r.height >= 120 && r.bottom > 0 && r.top < innerHeight;
+    }).sort((a, b) => {
+      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      return rb.width * rb.height - ra.width * ra.height;
+    });
+    const target = vids[0] || document.body;
+
+    const cats = { ai_generated: "AI-generated", ai_edited: "AI-edited (real footage, altered)", likely_real: "no artifacts found · not proof it's real", unclear: "couldn't determine" };
+    const category = data.category || "unclear";
+    const theme = category === "likely_real" ? "real" : (category === "ai_generated" || category === "ai_edited") ? "ai" : "unclear";
+    const title = "Video analysis: " + (cats[category] || "couldn't determine") +
+      ((theme === "ai" && data.likelihood >= 0.5) ? " · " + Math.round(data.likelihood * 100) + "%" : "");
+
+    let n = 0;
+    const located = category === "ai_generated" || category === "ai_edited";
+    const sigs = (data.signals || []).slice(0, 5).map((sg) => {
+      const frameRef = (sg.frames && sg.frames.length) ? " (frame" + (sg.frames.length > 1 ? "s " : " ") + sg.frames.join("–") + ")" : "";
+      const s = { id: sg.id || "detector", label: sg.label || "Temporal artifact", evidence: (sg.evidence || "") + frameRef };
+      if (located && sg.anchor && typeof sg.anchor.x === "number" && typeof sg.anchor.y === "number") {
+        s._n = ++n;
+        s._anchor = sg.anchor;
+      }
+      return s;
+    });
+    if (!sigs.length) sigs.push({ id: "detector", label: cats[category] || "Couldn't determine", evidence: (framesSent || 0) + " frames compared · no temporal artifacts" });
+
+    const verdictBubble = bubble(target, title, sigs, "llm", {
+      theme,
+      confidence: data.confidence,
+      trackTarget: target !== document.body ? target : null,
+      flagUrl: location.href,
+    });
+
+    if (target !== document.body && sigs.some((s) => s._anchor)) {
+      paintMarkers(target, sigs, (k) => {
+        if (verdictBubble) verdictBubble.click();
+        setTimeout(() => {
+          document.querySelectorAll("." + NS + "-pop .sig").forEach((c) => {
+            c.classList.toggle(NS + "-hot", c.dataset.n === String(k));
+          });
+        }, 60);
+      });
+    }
+  }
+
   chrome.runtime.onMessage.addListener((msg, _s, sendResponse) => {
     if (!msg) return;
     if (msg.type === "flagged-scan") { scan(); }
     if (msg.type === "flagged-analyze-image") { ensureOverlay(); analyzeImage(msg.srcUrl); }
+    if (msg.type === "flagged-video-result") { showVideoVerdict(msg.result || {}, msg.frames_sent); }
     if (msg.type === "flagged-clear") { clearAll(); }
     if (msg.type === "flagged-refresh") { state().then((on) => on && scan()); }
     if (msg.type === "flagged-scan-images") {

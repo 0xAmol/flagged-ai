@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Artifake \u2014 AI Detector",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "The internet won't tell you what's AI. Artifake will. Scan pages, images, and video frames \u2014 backed by an open public record.",
   "permissions": [
     "storage",

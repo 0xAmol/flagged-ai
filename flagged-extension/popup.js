@@ -39,7 +39,12 @@ async function init() {
 
   chrome.storage.onChanged.addListener((chg) => {
     if (chg.flagged_stats) renderStats(chg.flagged_stats.newValue || { pages: 0, sigs: 0 });
+    if (chg.flagged_video) renderVideoState(chg.flagged_video.newValue);
   });
+
+  // a video scan may have run (or still be running) from a previous popup
+  const vs = await chrome.storage.local.get("flagged_video");
+  renderVideoState(vs.flagged_video);
 
   renderLedger();
 }
@@ -165,42 +170,45 @@ function escapeHtml(s) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// ---- check a video: capture tab, downscale, vision-analyze ----
+// ---- check a video: worker samples ~5 frames over ~10s, temporal analysis ----
+// Sampling runs in the background worker so closing this popup doesn't kill
+// it. Progress and the verdict persist in storage; we render whatever state
+// exists, live — including on popup reopen.
 async function screenScan() {
-  toast("Capturing screen…", 0);
   $("scanresult").hidden = true;
-  let dataUrl;
-  try {
-    dataUrl = await chrome.tabs.captureVisibleTab(null, { format: "jpeg", quality: 88 });
-  } catch (e) {
-    toast("Can't capture this page (browser page?)");
-    return;
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await new Promise((resolve) =>
+    chrome.runtime.sendMessage({ type: "flagged-video-scan", windowId: tab ? tab.windowId : null, tabId: tab ? tab.id : null }, () => resolve()));
+  // hold the button's busy state until the worker reports done/error
+  await new Promise((resolve) => {
+    const done = (st) => st && (st.status === "done" || st.status === "error");
+    chrome.storage.local.get("flagged_video").then((r) => { if (done(r.flagged_video)) resolve(); });
+    const listener = (chg) => {
+      if (chg.flagged_video && done(chg.flagged_video.newValue)) {
+        chrome.storage.onChanged.removeListener(listener);
+        resolve();
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+  });
+}
+
+function renderVideoState(st) {
+  if (!st) return;
+  const fresh = !st.ts || Date.now() - st.ts < 10 * 60 * 1000;
+  if (st.status === "sampling") { toast("Watching the video… frame " + st.frame + " of " + st.total, 0); return; }
+  if (st.status === "analyzing") { toast("Analyzing " + st.frame + " frames for temporal artifacts…", 0); return; }
+  if (!fresh) return; // don't resurrect old verdicts on popup open
+  if (st.status === "error") { toast(st.error || "Video check failed"); return; }
+  if (st.status === "done") {
+    toast("");
+    chrome.runtime.sendMessage({ type: "flagged-video-ack" }).catch(() => {});
+    renderVideoResult(st.result, st.frames_sent);
   }
-  const img = new Image();
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
-  const maxW = 1400;
-  const scale = Math.min(1, maxW / img.width);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
-  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-  const b64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+}
 
-  toast("Analyzing… a few seconds", 0);
-  let res;
-  try {
-    res = await new Promise((resolve, reject) =>
-      chrome.runtime.sendMessage({
-        type: "flagged-fetch",
-        url: (FlagDB.API || "https://flagged-api.vercel.app") + "/v1/analyze-upload",
-        options: { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image_base64: b64, media_type: "image/jpeg" }) },
-      }, (r) => (chrome.runtime.lastError || !r) ? reject(new Error("relay")) : resolve(r)));
-  } catch { toast("Can't reach the analysis API"); return; }
-  toast("");
-  let d = {};
-  try { d = JSON.parse(res.body || "{}"); } catch {}
-  if (!res.ok) { toast(d.error || res.error || ("Analysis failed (" + res.status + ")")); return; }
-
+function renderVideoResult(d, framesSent) {
+  if (!d) return;
   const cats = {
     ai_generated: ["confirmed", "AI-generated"],
     ai_edited: ["confirmed", "AI-edited · altered"],
@@ -211,6 +219,12 @@ async function screenScan() {
   $("scanresult").hidden = false;
   $("scanresult-body").innerHTML =
     '<span class="badge ' + cls + '">' + label + (d.likelihood >= 0.5 ? " · " + Math.round(d.likelihood * 100) + "%" : "") + "</span>" +
-    (d.signals || []).map((s) => '<div class="srow"><b>' + escapeHtml(s.label || "") + '</b><span class="ev">' + escapeHtml(s.evidence || "") + "</span></div>").join("") +
-    '<div class="counts">LLM analysis · model judgment, not proof · image not stored' + (d.confidence ? " · " + escapeHtml(d.confidence) + " confidence" : "") + "</div>";
+    (d.signals || []).map((s) => {
+      const fr = (s.frames && s.frames.length) ? ' <span style="color:#7B8087;font-weight:400">(frame' + (s.frames.length > 1 ? "s " : " ") + s.frames.join("–") + ")</span>" : "";
+      return '<div class="srow"><b>' + escapeHtml(s.label || "") + "</b>" + fr + '<span class="ev">' + escapeHtml(s.evidence || "") + "</span></div>";
+    }).join("") +
+    '<div class="counts">' + (framesSent >= 2 ? framesSent + " frames · temporal analysis" : "single frame") +
+    " · model judgment, not proof · frames not stored" +
+    (d.confidence ? " · " + escapeHtml(d.confidence) + " confidence" : "") + "</div>";
 }
+
